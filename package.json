@@ -1,0 +1,34 @@
+{
+  "name": "ucpem",
+  "version": "0.0.0",
+  "description": "Universal Cloning PackagE Manager",
+  "main": "build/app.js",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "files": [
+    "build/**/*",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bt7s7k7/UCPeM.git"
+  },
+  "keywords": [],
+  "author": "bt7s7k7",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bt7s7k7/UCPeM/issues"
+  },
+  "homepage": "https://github.com/bt7s7k7/UCPeM#readme",
+  "dependencies": {
+    "@types/node": "^13.11.1"
+  },
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  },
+  "bin": {
+    "ucpem": "./build/app.js"
+  }
+}

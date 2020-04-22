@@ -63,6 +63,26 @@ class TestFail extends Error { }
         console.log("[SUCCESS]")
     }
 
+    console.log(`[SETUP] Create mock Unity port...`)
+    await run("mkdir unity", "./test")
+    await run("git init", "./test/unity")
+    await run("mkdir Assets", "./test/unity")
+    await run("mkdir UCPeM", "./test/unity/Assets")
+    await promisify(writeFile)("./test/unity/Assets/UCPeM/~ucpem_config", `
+        prepare
+            echo __THIRD
+            echo __FOURTH
+        end
+    `)
+
+    console.log(`[TEST] Run prepare script...`)
+    {
+        let out = await run("ucpem prepare", "./test/unity")
+        if (!out.includes("__THIRD") || !out.includes("__FOURTH")) throw new TestFail("Prepare script executed wrong, expected output missing")
+        console.log("[SUCCESS]")
+    }
+
+
 })().catch((err) => {
     if (err instanceof TestFail) {
         console.error(`[FAIL] ${err.message}`)

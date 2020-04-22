@@ -3,7 +3,7 @@ import { promisify } from "util"
 import { readFile } from "fs"
 import { UserError } from "./UserError"
 import { spawn } from "child_process"
-import { basename } from "path"
+import { basename, join } from "path"
 
 export interface IResource {
     name: string,
@@ -81,18 +81,30 @@ export function parseConfigFile(content: string, folder: string) {
 }
 
 export async function getFolderInfo(folder: string) {
-    const absolutePath = path.resolve(process.cwd(), folder)
     let configText = ""
-    try {
-        configText = (await promisify(readFile)(path.join(absolutePath, "~ucpem_config"))).toString()
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code != "ENOENT") {
-            throw err
-        } else {
-            throw new UserError(`Failed to find config file in ${folder}`)
+
+    let tryRead = async () => {
+        try {
+            configText = (await promisify(readFile)(path.join(path.resolve(process.cwd(), folder), "~ucpem_config"))).toString()
+        } catch (err) {
+            if ((err as NodeJS.ErrnoException).code != "ENOENT") {
+                throw err
+            } else {
+                return false
+            }
+        }
+
+        return true
+    }
+
+    if (!(await tryRead())) {
+        folder = join(folder, "Assets/UCPeM")
+        if (!(await tryRead())) {
+            throw new UserError(`Failed to find config file in ${basename(path.resolve(process.cwd(), folder))}`)
         }
     }
 
+    const absolutePath = path.resolve(process.cwd(), folder)
     return {
         path: absolutePath,
         name: basename(absolutePath),

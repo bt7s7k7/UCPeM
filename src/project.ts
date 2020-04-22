@@ -1,8 +1,8 @@
 import * as path from "path"
-import { promisify, inspect } from "util"
-import { readFile, stat } from "fs"
+import { promisify } from "util"
+import { readFile } from "fs"
 import { UserError } from "./UserError"
-import { exec, spawn } from "child_process"
+import { spawn } from "child_process"
 import { basename } from "path"
 
 export interface IResource {

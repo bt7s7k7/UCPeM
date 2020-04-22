@@ -1,5 +1,5 @@
-import { promisify, inspect } from "util"
-import { mkdir, writeFile } from "fs"
+import { promisify } from "util"
+import { writeFile } from "fs"
 import { spawn, SpawnOptions } from "child_process"
 
 export function run(command: string, cwd: string, options: SpawnOptions = {}) {
@@ -34,7 +34,7 @@ export function run(command: string, cwd: string, options: SpawnOptions = {}) {
     })
 }
 
-class TestFail extends Error {}
+class TestFail extends Error { }
 
 (async () => {
     console.log(`[SETUP] Creating testing folder...`)

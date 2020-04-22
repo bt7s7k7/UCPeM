@@ -2,15 +2,14 @@ import { promisify, inspect } from "util"
 import { mkdir, writeFile } from "fs"
 import { spawn, SpawnOptions } from "child_process"
 
-const DEFAULT_SHELL = (process.env.COMSPEC || process.env.SHELL) as string
-
 export function run(command: string, cwd: string, options: SpawnOptions = {}) {
     return new Promise<string>((resolve, reject) => {
         process.stdout.write(`> ${cwd} > ${command}\n\n  `)
 
-        const childProcess = spawn(DEFAULT_SHELL, DEFAULT_SHELL == "/bin/bash" ? ["-c", `"${command}"`] : ["/c", command], {
+        const childProcess = spawn(command, [], {
             ...options,
             cwd,
+            shell: true,
             stdio: "pipe"
         })
 

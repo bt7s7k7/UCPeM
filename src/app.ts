@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { UserError } from "./UserError"
 import { getFolderInfo, runPrepare } from "./project"
 import { inspect } from "util"

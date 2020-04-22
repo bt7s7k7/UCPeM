@@ -102,18 +102,17 @@ export async function getFolderInfo(folder: string) {
 
 export type Project = ReturnType<typeof getFolderInfo> extends PromiseLike<infer U> ? U : any
 
-const DEFAULT_SHELL = (process.env.COMSPEC || process.env.SHELL) as string
-
 export function runPrepare(project: Project) {
     return new Promise<void>((resolve, reject) => {
         const command = project.prepare.join(" && ")
 
         console.log(`[PRE] Running prepare script for '${project.name}'`)
 
-        const childProcess = spawn(DEFAULT_SHELL, DEFAULT_SHELL == "/bin/bash" ? ["-c", `"${command}"`] : ["/c", command], {
+        const childProcess = spawn(command, [], {
             cwd: project.path,
             env: { ...process.env },
-            stdio: "inherit"
+            stdio: "inherit",
+            shell: true
         })
 
         childProcess.on("error", (err) => reject(err))

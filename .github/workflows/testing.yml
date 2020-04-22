@@ -5,10 +5,13 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: Test
 
     steps:
     - uses: actions/checkout@v2
-
+    - uses: actions/setup-node@v1
+      with:
+        node-version: '10.x'
     - run: npm install
       name: Install npm packages
     - run: npm link

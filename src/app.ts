@@ -34,12 +34,16 @@ if (args.length == 0 || !(args[0] in commads)) {
     commandDefs.forEach(v => {
         console.log(`  ${v[0]}${" ".repeat(maxNameLength - v[0].length)}- ${v[1].desc}`)
     })
+
+    process.exit(1)
 } else {
     commads[args[0]].callback().catch(err => {
         if (err instanceof UserError) {
             console.error(`[ERR] ${err.message}`)
+            process.exit(1)
         } else {
             console.error(err)
+            process.exit(1)
         }
     })
 }

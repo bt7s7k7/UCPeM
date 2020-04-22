@@ -106,7 +106,7 @@ const DEFAULT_SHELL = (process.env.COMSPEC || process.env.SHELL) as string
 
 export function runPrepare(project: Project) {
     return new Promise<void>((resolve, reject) => {
-        const command = project.prepare.join(" & ")
+        const command = project.prepare.join(" && ")
 
         console.log(`[PRE] Running prepare script for '${project.name}'`)
 

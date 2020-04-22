@@ -1,5 +1,5 @@
 import { UserError } from "./UserError"
-import { getFolderInfo } from "./project"
+import { getFolderInfo, runPrepare } from "./project"
 import { inspect } from "util"
 
 const args = process.argv.slice(2)
@@ -14,7 +14,8 @@ var commads = {
     prepare: {
         desc: "Runs the prepare script for this package",
         async callback() {
-
+            let info = await getFolderInfo(".")
+            await runPrepare(info)
         }
     },
     info: {

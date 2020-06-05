@@ -14,5 +14,7 @@ jobs:
         node-version: '10.x'
     - run: npm install
       name: Install npm packages
+    - name: Tell git who I am
+      run: git config --global user.email "you@example.com" && git config --global user.name "Your Name"
     - run: npm run test
       name: Run test script

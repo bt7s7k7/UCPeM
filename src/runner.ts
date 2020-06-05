@@ -12,6 +12,7 @@ export function executeCommand(command: string, cwd: string, options: SpawnOptio
             shell: true,
             stdio: "pipe",
             env: {
+                ...process.env,
                 FORCE_COLOR: "true"
             }
         })

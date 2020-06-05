@@ -4,25 +4,32 @@ import { readFile, fstat, stat, readdir } from "fs"
 import { UserError } from "./UserError"
 import { spawn } from "child_process"
 import { basename, join } from "path"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "./constants"
 
 export interface IResource {
     name: string,
 }
 
-export interface IImportDeclaration {
-    port: string
+export interface IPort {
+    path: string
     name: string
     resources: IResource[]
+}
+
+export interface IDependency {
+    port: IPort
+    resource: IResource,
+    id: string
 }
 
 export function parseConfigFile(content: string, folder: string) {
     const lines = content.split(/\n/g)
     let prepare = [] as string[]
-    let ports = {} as Record<string, IImportDeclaration>
+    let ports = {} as Record<string, IPort>
     let exports = [] as IResource[]
 
     var state = "normal" as "normal" | "import" | "prepare" | "export"
-    var lastImport = null as IImportDeclaration | null
+    var lastImport = null as IPort | null
 
     for (let i = 0, len = lines.length; i < len; i++) {
         const getPos = () => `${folder}:${i + 1}`
@@ -37,8 +44,8 @@ export function parseConfigFile(content: string, folder: string) {
                     const portName = words[1]
                     if (!(portName in ports)) {
                         ports[portName] = {
-                            port: portName,
-                            name: path.basename(portName, path.extname(portName))
+                            path: portName,
+                            name: path.basename(portName, path.extname(portName)),
                             resources: []
                         }
                     }
@@ -77,19 +84,22 @@ export function parseConfigFile(content: string, folder: string) {
 
     return {
         prepare,
-        ports,
-        exports
-    }
+        imports: ports,
+        resources: exports,
+    } as IConfig
 }
 
-type Config = ReturnType<typeof parseConfigFile>
+export interface IConfig extends IPort {
+    prepare: string[]
+    imports: Record<string, IPort>
+}
 
-export async function getFolderInfo(folder: string) {
+export async function getProject(folder: string) {
     let configText = ""
 
     let tryRead = async () => {
         try {
-            configText = (await promisify(readFile)(path.join(path.resolve(process.cwd(), folder), "~ucpem_config"))).toString()
+            configText = (await promisify(readFile)(path.join(path.resolve(process.cwd(), folder), CONFIG_FILE_NAME))).toString()
         } catch (err) {
             if ((err as NodeJS.ErrnoException).code != "ENOENT") {
                 throw err
@@ -101,7 +111,7 @@ export async function getFolderInfo(folder: string) {
         return true
     }
 
-    let config = null as Config | null
+    let config = null as IConfig | null
 
     if (!(await tryRead())) {
         folder = join(folder, "Assets/UCPeM")
@@ -122,9 +132,11 @@ export async function getFolderInfo(folder: string) {
             let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
 
             config = {
-                exports: directories.map(v => ({ name: v })),
-                ports: {},
-                prepare: []
+                resources: directories.map(v => ({ name: v })),
+                imports: {},
+                prepare: [],
+                path: folder,
+                name: path.basename(folder)
             }
         }
     }
@@ -137,12 +149,29 @@ export async function getFolderInfo(folder: string) {
         path: absolutePath,
         name: basename(absolutePath),
         ...config
-    }
+    } as IProject
 }
 
-export type Project = ReturnType<typeof getFolderInfo> extends PromiseLike<infer U> ? U : any
+export interface IProject extends IConfig { }
 
-export function runPrepare(project: Project) {
+export async function getImportedProjects(project: IProject) {
+    let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
+    let folders = await promisify(readdir)(portsFolder).catch(v => [] as string[])
+
+    let projectsArray = (await Promise.all(folders.map(async portName => {
+        let portFolder = path.join(portsFolder, portName)
+        let stats = await promisify(stat)(portFolder).catch(v => null)
+
+        if (stats != null && stats.isDirectory()) {
+            let project = getProject(portFolder)
+            return project
+        } else return null
+    }))).filter(v => v != null) as IProject[]
+
+    return projectsArray
+}
+
+export function runPrepare(project: IProject) {
     return new Promise<void>((resolve, reject) => {
         const command = project.prepare.join(" && ")
 
@@ -164,4 +193,52 @@ export function runPrepare(project: Project) {
             }
         })
     })
+}
+
+export function getResourceId(port: IPort, resource: IResource) {
+    return port.name + "!" + resource.name
+}
+
+export function getDependencies(project: IProject) {
+    let dependencies = {} as Record<string, IDependency>
+
+    Object.values(project.imports).forEach(port => {
+        port.resources.forEach(resource => {
+            let id = getResourceId(port, resource)
+            dependencies[id] = { port, resource, id }
+        })
+    })
+
+    return dependencies
+}
+
+export function getExports(project: IProject) {
+    let exports = {} as Record<string, IDependency>
+
+    project.resources.forEach(resource => {
+        let id = getResourceId(project, resource)
+        exports[id] = { port: project, resource, id }
+    })
+
+    return exports
+}
+
+export function getAllDependencies(projects: IProject[]) {
+    let ret = {} as ReturnType<typeof getDependencies>
+
+    projects.forEach(v => {
+        Object.assign(ret, getDependencies(v))
+    })
+
+    return ret
+}
+
+export function getAllExports(projects: IProject[]) {
+    let ret = {} as ReturnType<typeof getExports>
+
+    projects.forEach(v => {
+        Object.assign(ret, getExports(v))
+    })
+
+    return ret
 }

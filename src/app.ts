@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { UserError } from "./UserError"
-import { getFolderInfo, runPrepare } from "./project"
+import { getProject, runPrepare, getDependencies } from "./project"
 import { inspect } from "util"
+import { install } from "./install"
 
 const args = process.argv.slice(2)
 
@@ -9,21 +10,30 @@ var commads = {
     install: {
         desc: "Downloads and prepares all ports",
         async callback() {
-
+            install(process.cwd())
+        }
+    },
+    update: {
+        desc: "Updates all ports",
+        async callback() {
+            install(process.cwd(), true)
         }
     },
     prepare: {
         desc: "Runs the prepare script for this package",
         async callback() {
-            let info = await getFolderInfo(".")
+            let info = await getProject(".")
             await runPrepare(info)
         }
     },
     info: {
         desc: "Prints imports and config files of the current project",
         async callback() {
-            let info = await getFolderInfo(".")
-            console.log(inspect(info, { colors: true, depth: Infinity }))
+            let project = await getProject(".")
+            console.log("Project: ")
+            console.log(inspect(project, { colors: true, depth: Infinity }))
+            console.log("Dependencies: ")
+            console.log(inspect(getDependencies(project), { colors: true, depth: Infinity }))
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

@@ -1,6 +1,6 @@
 import * as path from "path"
 import { promisify } from "util"
-import { readFile } from "fs"
+import { readFile, fstat, stat, readdir } from "fs"
 import { UserError } from "./UserError"
 import { spawn } from "child_process"
 import { basename, join } from "path"
@@ -80,6 +80,8 @@ export function parseConfigFile(content: string, folder: string) {
     }
 }
 
+type Config = ReturnType<typeof parseConfigFile>
+
 export async function getFolderInfo(folder: string) {
     let configText = ""
 
@@ -97,18 +99,42 @@ export async function getFolderInfo(folder: string) {
         return true
     }
 
+    let config = null as Config | null
+
     if (!(await tryRead())) {
         folder = join(folder, "Assets/UCPeM")
         if (!(await tryRead())) {
-            throw new UserError(`Failed to find config file in ${basename(path.resolve(process.cwd(), folder))}`)
+            folder = path.resolve(folder, "../..")
+
+            let tryFolder = async (name: string) => {
+                let stats = await promisify(stat)(path.resolve(process.cwd(), folder, name)).catch(() => { })
+                if (stats) return stats.isDirectory()
+                else return false
+            }
+
+            if (await tryFolder("Assets")) {
+                folder = path.resolve(folder, "./Assets")
+            }
+
+            let dirEntries = await promisify(readdir)(folder)
+            let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
+
+            config = {
+                exports: directories.map(v => ({ name: v })),
+                ports: {},
+                prepare: []
+            }
         }
     }
 
     const absolutePath = path.resolve(process.cwd(), folder)
+
+    if (config == null) config = parseConfigFile(configText, absolutePath)
+
     return {
         path: absolutePath,
         name: basename(absolutePath),
-        ...parseConfigFile(configText, absolutePath)
+        ...config
     }
 }
 

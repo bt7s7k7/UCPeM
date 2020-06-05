@@ -40,12 +40,6 @@ class TestFail extends Error { }
     console.log(`[SETUP] Creating testing folder...`)
     await run("rm -rf test && mkdir test", ".")
 
-    console.log(`[TEST] Run in invalid folder`)
-    if (await run("ucpem info", "./test").catch(() => { }) != undefined) {
-        throw new TestFail("Running in invalid folder didn't fail")
-    }
-    console.log(`[SUCCESS]`)
-
     console.log(`[SETUP] Creating project...`)
     await run("mkdir project", "./test")
     await run("git init", "./test/project")
@@ -63,10 +57,28 @@ class TestFail extends Error { }
         console.log("[SUCCESS]")
     }
 
-    console.log(`[SETUP] Create mock Unity port...`)
+    console.log(`[SETUP] Creating port...`)
     await run("mkdir unity", "./test")
     await run("git init", "./test/unity")
+
+    console.log(`[TEST] Default exports`)
+    await run("mkdir Dummy", "./test/unity")
+    {
+        let out = await run("ucpem info", "./test/unity")
+        if (!out.includes("Dummy")) throw new TestFail("Default export in root not found")
+        console.log("[SUCCESS]")
+    }
+    
+    console.log(`[TEST] Default exports in Asset folder`)
     await run("mkdir Assets", "./test/unity")
+    await run("mkdir Eummy2", "./test/unity/Assets")
+    {
+        let out = await run("ucpem info", "./test/unity")
+        if (!out.includes("Eummy")) throw new TestFail("Default export in Assets not found")
+        if (out.includes("Dummy")) throw new TestFail("Default export in root was found inspite Assets folder existing")
+        console.log("[SUCCESS]")
+    }
+
     await run("mkdir UCPeM", "./test/unity/Assets")
     await promisify(writeFile)("./test/unity/Assets/UCPeM/~ucpem_config", `
         prepare
@@ -79,6 +91,14 @@ class TestFail extends Error { }
     {
         let out = await run("ucpem prepare", "./test/unity")
         if (!out.includes("__THIRD") || !out.includes("__FOURTH")) throw new TestFail("Prepare script executed wrong, expected output missing")
+        console.log("[SUCCESS]")
+    }
+
+    console.log(`[TEST] No default exports with config`)
+    {
+        let out = await run("ucpem info", "./test/unity")
+        if (out.includes("Eummy2")) throw new TestFail("Default export in Assets was found inspite config existing")
+        if (out.includes("Dummy")) throw new TestFail("Default export in root was found inspite config existing")
         console.log("[SUCCESS]")
     }
 

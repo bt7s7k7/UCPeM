@@ -10,7 +10,8 @@ export interface IResource {
 }
 
 export interface IImportDeclaration {
-    port: string,
+    port: string
+    name: string
     resources: IResource[]
 }
 
@@ -37,6 +38,7 @@ export function parseConfigFile(content: string, folder: string) {
                     if (!(portName in ports)) {
                         ports[portName] = {
                             port: portName,
+                            name: path.basename(portName, path.extname(portName))
                             resources: []
                         }
                     }

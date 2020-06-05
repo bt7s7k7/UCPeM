@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { UserError } from "./UserError"
-import { getProject, runPrepare, getDependencies, getImportedProjects } from "./project"
+import { getProject, runPrepare, getDependencies, getImportedProjects, getExports, getAllDependencies, getAllExports } from "./project"
 import { inspect } from "util"
 import { install } from "./install"
 
@@ -34,10 +34,18 @@ var commads = {
         desc: "Prints imports and config files of the current project",
         async callback() {
             let project = await getProject(".")
-            console.log("Project: ")
-            console.log(inspect(project, { colors: true, depth: Infinity }))
-            console.log("Dependencies: ")
-            console.log(inspect(getDependencies(project), { colors: true, depth: Infinity }))
+            console.log(`Project ${project.name}`)
+            console.log(`  Imports:`)
+            Object.keys(getDependencies(project)).forEach(v => console.log(`    ${v}`))
+            console.log(`  Exports:`)
+            Object.keys(getExports(project)).forEach(v => console.log(`    ${v}`))
+            console.log(`Implicit:`)
+            let importedProjects = await getImportedProjects(project)
+            console.log(`  Imports:`)
+            Object.keys(getAllDependencies(importedProjects)).forEach(v => console.log(`    ${v}`))
+            console.log(`  Exports:`)
+            Object.keys(getAllExports(importedProjects)).forEach(v => console.log(`    ${v}`))
+
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

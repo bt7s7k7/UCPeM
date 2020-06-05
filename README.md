@@ -21,10 +21,22 @@ To export a resource from a port write:
 
 Ports can have a preparation script. It's run when the port is cloned, updated or manually using `ucpem prepare`. 
 ```xml
-"prepare"
+"prepare" ["using" <type>]
 <command>...
 "end"
 ``` 
+Prepare runners are:
+ - `shell` → Run the script in the default shell
+ - `node` → Use JavaScript in a node enviroment
+> Default is shell
+
+Prepare scripts get the following values: 
+ - `OWN_NAME` → Name of the port
+ - `OWN_PATH` → Path to the port
+ - `IS_PORT` → If the script is being ran in a port
+ - `PROJECT_PATH` → The name of the project
+ - `PROJECT_NAME` → The path to the project
+> In shell type runner the values are in enviroment variables prefixed with `UCPEM_`
 
 Lines starting with `#` are comments.
 ## Installation

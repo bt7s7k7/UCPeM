@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { UserError } from "./UserError"
-import { getProject, runPrepare, getDependencies } from "./project"
+import { getProject, runPrepare, getDependencies, getImportedProjects } from "./project"
 import { inspect } from "util"
 import { install } from "./install"
 
@@ -22,8 +22,12 @@ var commads = {
     prepare: {
         desc: "Runs the prepare script for this package",
         async callback() {
-            let info = await getProject(".")
-            await runPrepare(info)
+            let project = await getProject(".")
+            await runPrepare(project, null)
+            let imported = await getImportedProjects(project)
+            for (let importedProject of imported) {
+                await runPrepare(importedProject, project)
+            }
         }
     },
     info: {

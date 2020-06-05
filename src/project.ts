@@ -171,7 +171,7 @@ export async function getImportedProjects(project: IProject) {
     return projectsArray
 }
 
-export function runPrepare(project: IProject) {
+export function runPrepare(project: IProject, parentProject: IProject | null) {
     return new Promise<void>((resolve, reject) => {
         const command = project.prepare.join(" && ")
 
@@ -179,7 +179,14 @@ export function runPrepare(project: IProject) {
 
         const childProcess = spawn(command, [], {
             cwd: project.path,
-            env: { ...process.env },
+            env: {
+                ...process.env,
+                UCPEM_OWN_NAME: project.name,
+                UCPEM_OWN_PATH: project.path,
+                UCPEM_IS_PORT: (parentProject == null).toString(),
+                UCPEM_PROJECT_PATH: parentProject?.path ?? project.path,
+                UCPEM_PROJECT_NAME: parentProject?.name ?? project.name
+            },
             stdio: "inherit",
             shell: true
         })

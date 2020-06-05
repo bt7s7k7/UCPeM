@@ -25,7 +25,7 @@ export async function install(folder: string, forceUpdate = false) {
         for (let importedProject of imported) {
             let output = await executeCommand("git pull", importedProject.path)
             if (!output.includes("Already up to date.")) {
-                await runPrepare(await getProject(importedProject.path))
+                await runPrepare(await getProject(importedProject.path), project)
                 await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
             }
         }
@@ -59,7 +59,7 @@ export async function install(folder: string, forceUpdate = false) {
             let folder = path.join(portsFolder, port.name)
             await executeCommand(`git clone ${port.path} ${folder}`, portsFolder)
             let importedProject = await getProject(folder)
-            await runPrepare(importedProject)
+            await runPrepare(importedProject, project)
             let imports = await getAllImports([project, ...imported])
             await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
             console.log("")

@@ -174,6 +174,7 @@ export async function getImportedProjects(project: IProject) {
 export function runPrepare(project: IProject, parentProject: IProject | null) {
     return new Promise<void>((resolve, reject) => {
         const command = project.prepare.join(" && ")
+        if (command.length == 0) return resolve()
 
         console.log(`[PRE] Running prepare script for '${project.name}'`)
 

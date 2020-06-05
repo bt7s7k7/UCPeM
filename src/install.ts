@@ -105,7 +105,7 @@ export async function createResourceLinks(project: IProject, imports: Set<string
 
     await Promise.all(Object.values(exports).map(async dependency => {
         if (imports.has(dependency.id)) {
-            let link = path.join(project.path, dependency.resource.name)
+            let link = path.join(project.path, dependency.resource.name) + ".ucpem"
             let target = path.join(portProject.path, dependency.resource.name)
             console.log(`Linking ${link} to ${target}...`)
             await promisify(symlink)(target, link, "junction").catch((err: NodeJS.ErrnoException) => {

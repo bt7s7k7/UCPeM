@@ -14,7 +14,5 @@ jobs:
         node-version: '10.x'
     - run: npm install
       name: Install npm packages
-    - run: npm link
-      name: Link command
     - run: npm run test
       name: Run test script

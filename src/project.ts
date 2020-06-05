@@ -1,6 +1,7 @@
 import * as path from "path"
 import { promisify } from "util"
 import { readFile, fstat, stat, readdir } from "fs"
+import * as fs from "fs"
 import { UserError } from "./UserError"
 import { spawn } from "child_process"
 import { basename, join } from "path"
@@ -22,11 +23,15 @@ export interface IDependency {
     id: string
 }
 
+export const PREPARE_TYPES = ["shell", "node"] as const
+export type PrepareType = (typeof PREPARE_TYPES)[number]
+
 export function parseConfigFile(content: string, folder: string) {
     const lines = content.split(/\n/g)
     let prepare = [] as string[]
+    let prepareType = "normal" as PrepareType
     let ports = {} as Record<string, IPort>
-    let exports = [] as IResource[]
+    let exported = [] as IResource[]
 
     var state = "normal" as "normal" | "import" | "prepare" | "export"
     var lastImport = null as IPort | null
@@ -39,6 +44,18 @@ export function parseConfigFile(content: string, folder: string) {
         if (state == "normal") {
             if (line == "prepare") {
                 state = "prepare"
+            } else if (words[0] == "prepare") {
+                if (words[1] == "using") {
+                    let type = words[2] as PrepareType
+                    if (PREPARE_TYPES.includes(type)) {
+                        prepareType = type
+                        state = "prepare"
+                    } else {
+                        throw new UserError(`Invalid prepare type "${words[2] ?? ""}" at ${getPos()}`)
+                    }
+                } else {
+                    throw new UserError(`Prepare keyword should have 1 or 0 arguments ("prepare" ["using" <type>]) at ${getPos()}`)
+                }
             } else if (words[0] == "import") {
                 if (words.length == 2) {
                     const portName = words[1]
@@ -53,7 +70,7 @@ export function parseConfigFile(content: string, folder: string) {
                     lastImport = ports[portName]
                     state = "import"
                 } else {
-                    throw new UserError(`Import keywork should have 1 argument ("import" <port>) but ${words.length - 1} found at ${getPos()}`)
+                    throw new UserError(`Import keyword should have 1 argument ("import" <port>) but ${words.length - 1} found at ${getPos()}`)
                 }
             } else if (line == "export") {
                 state = "export"
@@ -77,7 +94,7 @@ export function parseConfigFile(content: string, folder: string) {
                 state = "normal"
             } else {
                 if (words.length > 1) throw new UserError(`Resource name cannot contain whitespace at ${getPos()}`)
-                exports.push({ name: words[0] })
+                exported.push({ name: words[0] })
             }
         }
     }
@@ -85,12 +102,14 @@ export function parseConfigFile(content: string, folder: string) {
     return {
         prepare,
         imports: ports,
-        resources: exports,
+        resources: exported,
+        prepareType
     } as IConfig
 }
 
 export interface IConfig extends IPort {
     prepare: string[]
+    prepareType: PrepareType
     imports: Record<string, IPort>
 }
 
@@ -136,7 +155,8 @@ export async function getProject(folder: string) {
                 imports: {},
                 prepare: [],
                 path: folder,
-                name: path.basename(folder)
+                name: path.basename(folder),
+                prepareType: "node"
             }
         }
     }
@@ -173,33 +193,56 @@ export async function getImportedProjects(project: IProject) {
 
 export function runPrepare(project: IProject, parentProject: IProject | null) {
     return new Promise<void>((resolve, reject) => {
-        const command = project.prepare.join(" && ")
-        if (command.length == 0) return resolve()
+        if (project.prepare.length == 0) return resolve()
 
         console.log(`[PRE] Running prepare script for '${project.name}'`)
 
-        const childProcess = spawn(command, [], {
-            cwd: project.path,
-            env: {
-                ...process.env,
-                UCPEM_OWN_NAME: project.name,
-                UCPEM_OWN_PATH: project.path,
-                UCPEM_IS_PORT: (parentProject == null).toString(),
-                UCPEM_PROJECT_PATH: parentProject?.path ?? project.path,
-                UCPEM_PROJECT_NAME: parentProject?.name ?? project.name
-            },
-            stdio: "inherit",
-            shell: true
-        })
+        let prepareRunners = {
+            shell: () => {
+                const command = project.prepare.join(" && ")
+                const childProcess = spawn(command, [], {
+                    cwd: project.path,
+                    env: {
+                        ...process.env,
+                        UCPEM_OWN_NAME: project.name,
+                        UCPEM_OWN_PATH: project.path,
+                        UCPEM_IS_PORT: (parentProject == null).toString(),
+                        UCPEM_PROJECT_PATH: parentProject?.path ?? project.path,
+                        UCPEM_PROJECT_NAME: parentProject?.name ?? project.name
+                    },
+                    stdio: "inherit",
+                    shell: true
+                })
 
-        childProcess.on("error", (err) => reject(err))
-        childProcess.on("exit", (code) => {
-            if (code == 0) {
-                resolve()
-            } else {
-                reject(new UserError(`Prepare script failed with error code ${code} '${project.name}'`))
+                childProcess.on("error", (err) => reject(err))
+                childProcess.on("exit", (code) => {
+                    if (code == 0) {
+                        resolve()
+                    } else {
+                        reject(new UserError(`Prepare script failed with error code ${code} '${project.name}'`))
+                    }
+                })
+            },
+            node: () => {
+                let code = project.prepare.join("\n")
+                let compiled = new Function("OWN_NAME", "OWN_PATH", "IS_PORT", "PROJECT_PATH", "PROJECT_NAME", "path", "fs", code)
+
+                compiled(
+                    project.name,
+                    project.path,
+                    parentProject == null,
+                    parentProject?.path ?? project.path,
+                    parentProject?.name ?? project.name,
+                    path,
+                    fs
+                )
             }
-        })
+        } as Record<PrepareType, () => void>
+
+        let runner = prepareRunners[project.prepareType]
+
+        if (runner == null) throw new Error(`Project has specified unknown runner ${project.prepareType}`)
+        runner()
     })
 }
 

@@ -29,7 +29,7 @@ export type PrepareType = (typeof PREPARE_TYPES)[number]
 export function parseConfigFile(content: string, folder: string) {
     const lines = content.split(/\n/g)
     let prepare = [] as string[]
-    let prepareType = "normal" as PrepareType
+    let prepareType: PrepareType = "shell"
     let ports = {} as Record<string, IPort>
     let exported = [] as IResource[]
 

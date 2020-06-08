@@ -34,7 +34,7 @@ var commads = {
         desc: "Prints imports and config files of the current project",
         async callback() {
             let project = await getProject(".")
-            console.log(`Project ${project.name}`)
+            console.log(`Project ${project.name} at ${project.path}`)
             console.log(`  Imports:`)
             Object.keys(getDependencies(project)).forEach(v => console.log(`    ${v}`))
             console.log(`  Exports:`)
@@ -47,11 +47,25 @@ var commads = {
             Object.keys(getAllExports(importedProjects)).forEach(v => console.log(`    ${v}`))
 
         }
+    },
+    _devinfo: {
+        desc: "",
+        async callback() {
+            let project = await getProject(".")
+            console.log(project)
+            let importedProjects = await getImportedProjects(project)
+            console.log("----------------------------")
+            console.log(importedProjects)
+            console.log("----------------------------")
+            console.log(getAllExports(importedProjects))
+            console.log("----------------------------")
+            console.log(getAllDependencies(importedProjects))
+        }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>
 
 if (args.length == 0 || !(args[0] in commads)) {
-    let commandDefs = Object.entries(commads)
+    let commandDefs = Object.entries(commads).filter(v => v[0][0] != "_")
     let maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v[0].length), 0) + 1
     console.log("Usage:\n  ucpem <operation>\n\nOperations:")
     commandDefs.forEach(v => {

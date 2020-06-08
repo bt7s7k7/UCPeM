@@ -41,7 +41,7 @@ export async function install(folder: string, forceUpdate = false) {
 
     let lastMissing = new Set<string>(missing.map(v => v.id))
 
-    let portsFolder = path.join(folder, PORT_FOLDER_NAME)
+    let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
 
     await promisify(mkdir)(portsFolder).catch(v => v)
 

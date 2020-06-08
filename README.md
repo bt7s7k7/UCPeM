@@ -10,7 +10,7 @@ A project contains `ucpem_config` file defining a name, imports and exports. To 
 ```
 Port is a path for `git clone`. Resource names must be `[a-zA-Z0-9_]+`.
 
-Port must be a git clone URL. Imported resources are placed relative to the config file of the project in `${resourceName}.ucpem`. All cloned repos will be placed into a `~ucpem_ports` folder in the root of the project. 
+Port must be a git clone URL. Imported resources are placed relative to the config file of the project in `${resourceName}.ucpem`. All cloned repos will be placed into a `ucpem_ports~` folder in the root of the project. 
 
 To export a resource from a port write:
 ```xml
@@ -60,5 +60,5 @@ Run ucpem without arguments to view help.
 ```git
 # Just add
 *.ucpem
-~ucpem_ports
+ucpem_ports~
 ```

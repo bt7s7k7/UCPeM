@@ -2,7 +2,7 @@
 import { UserError } from "./UserError"
 import { getProject, runPrepare, getDependencies, getImportedProjects, getExports, getAllDependencies, getAllExports } from "./project"
 import { inspect } from "util"
-import { install } from "./install"
+import { install, createResourceLinks } from "./install"
 
 const args = process.argv.slice(2)
 
@@ -60,6 +60,17 @@ var commads = {
             console.log(getAllExports(importedProjects))
             console.log("----------------------------")
             console.log(getAllDependencies(importedProjects))
+        }
+    },
+    link: {
+        desc: "Recreates links for imported resources",
+        async callback() {
+            let project = await getProject(".")
+            let imported = await getImportedProjects(project)
+            let imports = await getAllExports([project, ...imported])
+            for (let importedProject of imported) {
+                await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
+            }
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

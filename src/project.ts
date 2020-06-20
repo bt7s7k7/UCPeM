@@ -115,6 +115,7 @@ export interface IConfig extends IPort {
 
 export async function getProject(folder: string) {
     let configText = ""
+    let initFolder = folder
 
     let tryRead = async () => {
         try {
@@ -130,6 +131,12 @@ export async function getProject(folder: string) {
         return true
     }
 
+    let tryFolder = async (name: string) => {
+        let stats = await promisify(stat)(path.resolve(process.cwd(), folder, name)).catch(() => { })
+        if (stats) return stats.isDirectory()
+        else return false
+    }
+
     let config = null as IConfig | null
 
     if (!(await tryRead())) {
@@ -137,26 +144,26 @@ export async function getProject(folder: string) {
         if (!(await tryRead())) {
             folder = path.resolve(folder, "../..")
 
-            let tryFolder = async (name: string) => {
-                let stats = await promisify(stat)(path.resolve(process.cwd(), folder, name)).catch(() => { })
-                if (stats) return stats.isDirectory()
-                else return false
+            if (await tryFolder("src")) {
+                folder = path.join(folder, "src")
             }
 
             if (await tryFolder("Assets")) {
                 folder = path.resolve(folder, "./Assets")
             }
 
-            let dirEntries = await promisify(readdir)(folder)
-            let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
+            if (!(await tryRead())) {
+                let dirEntries = await promisify(readdir)(folder)
+                let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
 
-            config = {
-                resources: directories.map(v => ({ name: v })),
-                imports: {},
-                prepare: [],
-                path: folder,
-                name: path.basename(folder),
-                prepareType: "node"
+                config = {
+                    resources: directories.map(v => ({ name: v })),
+                    imports: {},
+                    prepare: [],
+                    path: folder,
+                    name: path.basename(folder),
+                    prepareType: "node"
+                }
             }
         }
     }
@@ -166,9 +173,9 @@ export async function getProject(folder: string) {
     if (config == null) config = parseConfigFile(configText, absolutePath)
 
     return {
+        ...config,
         path: absolutePath,
-        name: basename(absolutePath),
-        ...config
+        name: basename(path.resolve(process.cwd(), initFolder))
     } as IProject
 }
 

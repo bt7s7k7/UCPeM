@@ -1,9 +1,9 @@
-import { promisify } from "util"
+import { SpawnOptions } from "child_process"
 import { writeFile } from "fs"
-import { spawn, SpawnOptions } from "child_process"
+import { promisify } from "util"
 import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./constants"
-import path = require("path")
 import { executeCommand, RunnerError } from "./runner"
+import path = require("path")
 
 class TestFail extends Error { }
 
@@ -91,9 +91,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("mkdir alphaResource", "./test/portAlpha")
         await run("git init", "./test/portAlpha")
         await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
-        export
-            alphaResource
-        end
+        raw alphaResource 
 
         prepare
             echo __PREPARE_ALPHA
@@ -105,8 +103,10 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("git add .", "./test/portAlpha")
         await run(`git commit -m "Added resources"`, "./test/portAlpha")
         await promisify(writeFile)(path.join("./test/project", CONFIG_FILE_NAME), `
-        import ${path.join(process.cwd(), "./test/portAlpha")}
-            alphaResource
+        res project 
+            ${path.join(process.cwd(), "./test/portAlpha")}
+                alphaResource
+            end
         end
         `)
         let installOutput = await run("ucpem install", "./test/project")
@@ -127,9 +127,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("mkdir betaResource", "./test/portBeta")
         await run("git init", "./test/portBeta")
         await promisify(writeFile)(path.join("./test/portBeta", CONFIG_FILE_NAME), `
-        export
-            betaResource
-        end
+        raw betaResource
 
         prepare
             echo __PREPARE_BETA
@@ -141,16 +139,15 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("git add .", "./test/portBeta")
         await run(`git commit -m "Added resources"`, "./test/portBeta")
         await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
-        export
-            alphaResource
-        end
-
+        
         prepare
             echo __PREPARE_ALPHA
         end
-
-        import ${path.join(process.cwd(), "./test/portBeta")}
-            betaResource
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
         end
         `)
         await run("git add .", "./test/portAlpha")

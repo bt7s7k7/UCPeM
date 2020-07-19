@@ -180,7 +180,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         end
 
         res deltaResource
-            INVALID
+            ${path.join(process.cwd(), "./test/portGamma")}
                 gammaResource
             end
         end
@@ -190,6 +190,50 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("ucpem update", "./test/project")
         let infoOutput = run("ucpem info", "./test/project")
         if ((await infoOutput).includes("gammaResource")) throw new TestFail("Depenencies for an unimported resource are imported")
+    }
+
+    console.log("[TEST] Import resource from self")
+    {
+        await run("mkdir portGamma", "./test")
+        await run("mkdir gammaResource", "./test/portGamma")
+        await run("git init", "./test/portGamma")
+        await promisify(writeFile)(path.join("./test/portGamma", CONFIG_FILE_NAME), `
+        raw gammaResource
+
+        prepare
+            echo __PREPARE_GAMMA
+        end
+        `)
+        await run("git add .", "./test/portGamma")
+        await run(`git commit -m "Added resources"`, "./test/portGamma")
+
+        await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
+        
+        prepare
+            echo __PREPARE_ALPHA
+        end
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
+
+            self
+                deltaResource
+            end
+        end
+
+        res deltaResource
+            ${path.join(process.cwd(), "./test/portGamma")}
+                gammaResource
+            end
+        end
+        `)
+        await run("git add .", "./test/portAlpha")
+        await run(`git commit -m "Added added wanted resource"`, "./test/portAlpha")
+
+        let installOutput = await run("ucpem update", "./test/project")
+        if (!installOutput.includes("__PREPARE_GAMMA")) throw new TestFail("Prepare script in portGamma not run")
     }
 
     process.exit(0)

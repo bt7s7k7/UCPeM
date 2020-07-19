@@ -47,7 +47,6 @@ export function parseConfigFile(content: string, folder: string) {
     var state = "normal" as "normal" | "prepare" | "resource" | "resourceImport"
     var resource = null as IResource | null
     var resourceImport = null as IPort | null
-    var resources = [] as IResource[]
 
     for (let i = 0, len = lines.length; i < len; i++) {
         const getPos = () => `${folder}:${i + 1}`
@@ -124,6 +123,11 @@ export function parseConfigFile(content: string, folder: string) {
             } else {
                 if (words.length > 1) throw new UserError(`Port name cannot contain whitespace at ${getPos()}`)
                 let portName = words[0]
+
+                if (portName == "self") {
+                    portName = folder
+                }
+
                 if (!resource) throw new Error("`resource` is null in resource state")
 
                 if (portName in resource.imports) {
@@ -340,7 +344,7 @@ export function getDependencies(project: IProject, wantedResources: WantedResour
         if (!(portName in wantedResources)) {
             wantedResources[portName] = []
         }
-        wantedResources[portName].push(dependency.id)
+        if (!wantedResources[portName].includes(dependency.id)) wantedResources[portName].push(dependency.id)
     })
 
     if (state.debug) {
@@ -374,7 +378,7 @@ export function getAllDependencies(projects: IProject[], wantedResources: Wanted
     let calcWantedResourcesLength = () => {
         newWantedResourcesLength = 0
 
-        Object.values(wantedResources).forEach(v => wantedResourcesLength += v.length)
+        Object.values(wantedResources).forEach(v => newWantedResourcesLength += v.length)
 
         if (state.debug) {
             console.log(`[aDEP] Wanted resources:`, wantedResources)
@@ -388,16 +392,10 @@ export function getAllDependencies(projects: IProject[], wantedResources: Wanted
         projects.forEach(project => {
             let dependencies = getDependencies(project, wantedResources)
             Object.assign(ret, dependencies)
-            Object.values(dependencies).forEach(dependency => {
-                let portName = dependency.port.name
-                if (!(portName in wantedResources)) {
-                    wantedResources[portName] = []
-                }
-                wantedResources[portName].push(dependency.id)
-            })
         })
 
         calcWantedResourcesLength()
+        if (state.debug) console.log("[aDEP]", newWantedResourcesLength, ">", wantedResourcesLength)
     } while (newWantedResourcesLength > wantedResourcesLength)
 
     return ret

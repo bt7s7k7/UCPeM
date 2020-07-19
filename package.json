@@ -4,7 +4,7 @@
     "description": "Universal Cloning PackagE Manager",
     "main": "build/app.js",
     "scripts": {
-        "build": "tsc",
+        "build": "tsc --incremental",
         "prepare": "npm run build",
         "test": "npm link --force && node build/test.js"
     },

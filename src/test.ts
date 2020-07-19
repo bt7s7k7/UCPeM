@@ -54,11 +54,11 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
 
     console.log(`[TEST] Default exports in Asset folder`)
     await run("mkdir Assets", "./test/unity")
-    await run("mkdir Eummy2", "./test/unity/Assets")
+    await run("mkdir Other", "./test/unity/Assets")
     {
         let out = await run("ucpem info", "./test/unity")
-        if (!out.includes("Eummy")) throw new TestFail("Default export in Assets not found")
-        if (out.includes("Dummy")) throw new TestFail("Default export in root was found inspite Assets folder existing")
+        if (!out.includes("Other")) throw new TestFail("Default export in Assets not found")
+        if (out.includes("Dummy")) throw new TestFail("Default export in root was found in spite Assets folder existing")
         console.log("[SUCCESS]")
     }
 
@@ -80,8 +80,8 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
     console.log(`[TEST] No default exports with config`)
     {
         let out = await run("ucpem info", "./test/unity")
-        if (out.includes("Eummy2")) throw new TestFail("Default export in Assets was found inspite config existing")
-        if (out.includes("Dummy")) throw new TestFail("Default export in root was found inspite config existing")
+        if (out.includes("Other")) throw new TestFail("Default export in Assets was found in spite config existing")
+        if (out.includes("Dummy")) throw new TestFail("Default export in root was found in spite config existing")
         console.log("[SUCCESS]")
     }
 
@@ -117,7 +117,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
     console.log("[TEST] Stop the install when no missing dependencies")
     {
         let output = await run("ucpem install", "./test/project")
-        if (!output.includes(MSG_NO_MISSING_DEPENDENCIES)) throw new TestFail("Expected no missing depencencies message")
+        if (!output.includes(MSG_NO_MISSING_DEPENDENCIES)) throw new TestFail("Expected no missing dependencies message")
         console.log("[SUCCESS]")
     }
 
@@ -165,7 +165,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         if (!betaResourceRunOut.includes("__BETA")) throw new TestFail("Running implicitly imported resource didn't result in expected output")
     }
 
-    console.log("[TEST] Don't install depenencies for a resource that's not imported")
+    console.log("[TEST] Don't install dependencies for a resource that's not imported")
     {
         await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
         
@@ -189,7 +189,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run(`git commit -m "Added added unwanted resource"`, "./test/portAlpha")
         await run("ucpem update", "./test/project")
         let infoOutput = run("ucpem info", "./test/project")
-        if ((await infoOutput).includes("gammaResource")) throw new TestFail("Depenencies for an unimported resource are imported")
+        if ((await infoOutput).includes("gammaResource")) throw new TestFail("Dependencies for an unimported resource are imported")
     }
 
     console.log("[TEST] Import resource from self")

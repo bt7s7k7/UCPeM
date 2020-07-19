@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { UserError } from "./UserError"
-import { getProject, runPrepare, getDependencies, getImportedProjects, getExports, getAllDependencies, getAllExports } from "./project"
 import { inspect } from "util"
-import { install, createResourceLinks } from "./install"
+import { state } from "./global"
+import { createResourceLinks, install } from "./install"
+import { getAllDependencies, getAllExports, getDependencies, getExports, getImportedProjects, getProject, makeAllExportsWanted, runPrepare } from "./project"
+import { UserError } from "./UserError"
 
 const args = process.argv.slice(2)
 
@@ -34,32 +35,50 @@ var commads = {
         desc: "Prints imports and config files of the current project",
         async callback() {
             let project = await getProject(".")
+            let wantedResources = makeAllExportsWanted(project)
             console.log(`Project ${project.name} at ${project.path}`)
             console.log(`  Imports:`)
-            Object.keys(getDependencies(project)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getDependencies(project, wantedResources)).forEach(v => console.log(`    ${v}`))
             console.log(`  Exports:`)
-            Object.keys(getExports(project)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getExports(project)).filter(v => !v.includes("$")).forEach(v => console.log(`    ${v}`))
             console.log(`Implicit:`)
             let importedProjects = await getImportedProjects(project)
             console.log(`  Imports:`)
-            Object.keys(getAllDependencies(importedProjects)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getAllDependencies(importedProjects, wantedResources)).forEach(v => console.log(`    ${v}`))
             console.log(`  Exports:`)
-            Object.keys(getAllExports(importedProjects)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getAllExports(importedProjects)).filter(v => !v.includes("$")).forEach(v => console.log(`    ${v}`))
 
         }
     },
     _devinfo: {
         desc: "",
         async callback() {
+            state.debug = true
+
             let project = await getProject(".")
-            console.log(project)
+            let wantedResources = makeAllExportsWanted(project)
             let importedProjects = await getImportedProjects(project)
+
+            let projectDependencies = getDependencies(project, wantedResources)
+            let allExports = getAllExports(importedProjects)
+            let allDependencies = getAllDependencies(importedProjects, wantedResources)
+
             console.log("----------------------------")
-            console.log(importedProjects)
+            console.log("|         Project          |")
             console.log("----------------------------")
-            console.log(getAllExports(importedProjects))
+            console.log(inspect(project, { colors: true, depth: 10 }))
             console.log("----------------------------")
-            console.log(getAllDependencies(importedProjects))
+            console.log("|    Imported projects     |")
+            console.log("----------------------------")
+            console.log(inspect(importedProjects, { colors: true, depth: 10 }))
+            console.log("----------------------------")
+            console.log("|        All Exports       |")
+            console.log("----------------------------")
+            console.log(inspect(allExports, { colors: true, depth: 10 }))
+            console.log("----------------------------")
+            console.log("|     All dependencies     |")
+            console.log("----------------------------")
+            console.log(inspect(allDependencies, { colors: true, depth: 10 }))
         }
     },
     link: {
@@ -67,7 +86,7 @@ var commads = {
         async callback() {
             let project = await getProject(".")
             let imported = await getImportedProjects(project)
-            let imports = await getAllExports([project, ...imported])
+            let imports = getAllExports([project, ...imported])
             for (let importedProject of imported) {
                 await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
             }

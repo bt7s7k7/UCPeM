@@ -1,20 +1,21 @@
-import * as path from "path"
-import { promisify } from "util"
-import { readFile, fstat, stat, readdir } from "fs"
-import * as fs from "fs"
-import { UserError } from "./UserError"
 import { spawn } from "child_process"
+import * as fs from "fs"
+import { readdir, readFile, stat } from "fs"
+import * as path from "path"
 import { basename, join } from "path"
-import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "./constants"
+import { promisify } from "util"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, state } from "./global"
+import { UserError } from "./UserError"
 
 export interface IResource {
     name: string,
+    imports: Record<string, IPort>
 }
 
 export interface IPort {
     path: string
     name: string
-    resources: IResource[]
+    exported: Record<string, IResource>
 }
 
 export interface IDependency {
@@ -23,18 +24,29 @@ export interface IDependency {
     id: string
 }
 
+export interface IConfig extends IPort {
+    prepare: string[]
+    prepareType: PrepareType
+}
+
+export interface IProject extends IConfig { }
+
 export const PREPARE_TYPES = ["shell", "node"] as const
 export type PrepareType = (typeof PREPARE_TYPES)[number]
+
+export type WantedResources = Record<string, string[]>
+
+const DEFAULT_RESOURCE_NAME = "$"
 
 export function parseConfigFile(content: string, folder: string) {
     const lines = content.split(/\n/g)
     let prepare = [] as string[]
     let prepareType: PrepareType = "shell"
-    let ports = {} as Record<string, IPort>
-    let exported = [] as IResource[]
+    let exported = {} as Record<string, IResource>
 
-    var state = "normal" as "normal" | "import" | "prepare" | "export"
-    var lastImport = null as IPort | null
+    var state = "normal" as "normal" | "prepare" | "resource" | "resourceImport"
+    var resource = null as IResource | null
+    var resourceImport = null as IPort | null
 
     for (let i = 0, len = lines.length; i < len; i++) {
         const getPos = () => `${folder}:${i + 1}`
@@ -56,24 +68,48 @@ export function parseConfigFile(content: string, folder: string) {
                 } else {
                     throw new UserError(`Prepare keyword should have 1 or 0 arguments ("prepare" ["using" <type>]) at ${getPos()}`)
                 }
-            } else if (words[0] == "import") {
+            } else if (words[0] == "res") {
                 if (words.length == 2) {
-                    const portName = words[1]
-                    if (!(portName in ports)) {
-                        ports[portName] = {
-                            path: portName,
-                            name: path.basename(portName, path.extname(portName)),
-                            resources: []
-                        }
+                    const resName = words[1]
+                    if (resName in exported) {
+                        throw new UserError(`Duplicate resource definition at ${getPos()}`)
                     }
 
-                    lastImport = ports[portName]
-                    state = "import"
+                    exported[resName] = resource = {
+                        imports: {},
+                        name: resName
+                    }
+
+                    state = "resource"
                 } else {
-                    throw new UserError(`Import keyword should have 1 argument ("import" <port>) but ${words.length - 1} found at ${getPos()}`)
+                    throw new UserError(`Resource keyword should have 1 argument ("res" <name>) but ${words.length - 1} found at ${getPos()}`)
                 }
-            } else if (line == "export") {
-                state = "export"
+            } else if (line == "default") {
+                const resName = DEFAULT_RESOURCE_NAME
+                if (resName in exported) {
+                    throw new UserError(`Duplicate default resource definition at ${getPos()}`)
+                }
+
+                exported[resName] = resource = {
+                    imports: {},
+                    name: resName
+                }
+
+                state = "resource"
+            } else if (words[0] == "raw") {
+                if (words.length == 2) {
+                    const resName = words[1]
+                    if (resName in exported) {
+                        throw new UserError(`Duplicate resource definition at ${getPos()}`)
+                    }
+
+                    exported[resName] = resource = {
+                        imports: {},
+                        name: resName
+                    }
+                } else {
+                    throw new UserError(`Raw resource keyword should have 1 argument ("raw" <name>) but ${words.length - 1} found at ${getPos()}`)
+                }
             } else throw new UserError(`Invalid keyword "${line}" at ${getPos()}`)
         } else if (state == "prepare") {
             if (line == "end") {
@@ -81,36 +117,48 @@ export function parseConfigFile(content: string, folder: string) {
             } else {
                 prepare.push(line)
             }
-        } else if (state == "import") {
+        } else if (state == "resource") {
             if (line == "end") {
                 state = "normal"
             } else {
-                if (words.length > 1) throw new UserError(`Resource name cannot contain whitespace at ${getPos()}`)
-                if (!lastImport) throw new Error("Last import not set in import state")
-                lastImport.resources.push({ name: words[0] })
+                if (words.length > 1) throw new UserError(`Port name cannot contain whitespace at ${getPos()}`)
+                let portName = words[0]
+
+                if (portName == "self") {
+                    portName = folder
+                }
+
+                if (!resource) throw new Error("`resource` is null in resource state")
+
+                if (portName in resource.imports) {
+                    throw new UserError(`Duplicate port ${portName} in resource ${resource.name} at ${getPos()}`)
+                }
+
+                resourceImport = resource.imports[portName] = {
+                    path: portName,
+                    name: path.basename(portName, path.extname(portName)),
+                    exported: {}
+                }
+
+                state = "resourceImport"
             }
-        } else if (state == "export") {
+        } else if (state == "resourceImport") {
             if (line == "end") {
-                state = "normal"
+                state = "resource"
+                resourceImport = null
             } else {
+                if (!resourceImport) throw new Error("`resourceImport` is null in resourceImport state")
                 if (words.length > 1) throw new UserError(`Resource name cannot contain whitespace at ${getPos()}`)
-                exported.push({ name: words[0] })
+                resourceImport.exported[words[0]] = { name: words[0], imports: {} }
             }
         }
     }
 
     return {
         prepare,
-        imports: ports,
-        resources: exported,
-        prepareType
+        prepareType,
+        exported
     } as IConfig
-}
-
-export interface IConfig extends IPort {
-    prepare: string[]
-    prepareType: PrepareType
-    imports: Record<string, IPort>
 }
 
 export async function getProject(folder: string) {
@@ -157,8 +205,7 @@ export async function getProject(folder: string) {
                 let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
 
                 config = {
-                    resources: directories.map(v => ({ name: v })),
-                    imports: {},
+                    exported: Object.assign({}, ...directories.map(v => ({ [v]: { name: v, imports: {} } }))),
                     prepare: [],
                     path: folder,
                     name: path.basename(folder),
@@ -178,8 +225,6 @@ export async function getProject(folder: string) {
         name: basename(path.resolve(process.cwd(), initFolder))
     } as IProject
 }
-
-export interface IProject extends IConfig { }
 
 export async function getImportedProjects(project: IProject) {
     let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
@@ -257,23 +302,66 @@ export function getResourceId(port: IPort, resource: IResource) {
     return port.name + "!" + resource.name
 }
 
-export function getDependencies(project: IProject) {
+export function getDependencies(project: IProject, wantedResources: WantedResources) {
     let dependencies = {} as Record<string, IDependency>
 
-    Object.values(project.imports).forEach(port => {
-        port.resources.forEach(resource => {
-            let id = getResourceId(port, resource)
-            dependencies[id] = { port, resource, id }
+    let includeExported = (exported: IDependency) => {
+        Object.values(exported.resource.imports).forEach(port => {
+            Object.values(port.exported).forEach(resource => {
+                let id = getResourceId(port, resource)
+                dependencies[id] = {
+                    id,
+                    port,
+                    resource
+                }
+            })
         })
+    }
+
+    let exports = getExports(project)
+
+    if (project.name in wantedResources) { // Get if we even want anything from this project
+        let wanted = wantedResources[project.name]
+        wanted.forEach(v => { // For each wanted resource
+            if (v in exports) { // Test if we have it, then add all dependencies of that resource to the dependencies
+                includeExported(exports[v])
+            } else {
+                throw new Error(`Failed to resolve ${v}, resource not exported`)
+            }
+        })
+    }
+
+    // If we have default imports include them
+    if (DEFAULT_RESOURCE_NAME in exports) includeExported(exports[DEFAULT_RESOURCE_NAME])
+
+    if (state.debug) {
+        console.log("[lDEP]", project.name, dependencies)
+        console.log("     |", wantedResources)
+    }
+
+    Object.values(dependencies).forEach(dependency => {
+        let portName = dependency.port.name
+        if (!(portName in wantedResources)) {
+            wantedResources[portName] = []
+        }
+        if (!wantedResources[portName].includes(dependency.id)) wantedResources[portName].push(dependency.id)
     })
 
+    if (state.debug) {
+        console.log("     |", wantedResources)
+    }
+
     return dependencies
+}
+
+export function makeAllExportsWanted(project: IProject) {
+    return { [project.name]: Object.values(project.exported).map(v => getResourceId(project, v)) }
 }
 
 export function getExports(project: IProject) {
     let exports = {} as Record<string, IDependency>
 
-    project.resources.forEach(resource => {
+    Object.values(project.exported).forEach(resource => {
         let id = getResourceId(project, resource)
         exports[id] = { port: project, resource, id }
     })
@@ -281,12 +369,34 @@ export function getExports(project: IProject) {
     return exports
 }
 
-export function getAllDependencies(projects: IProject[]) {
+export function getAllDependencies(projects: IProject[], wantedResources: WantedResources) {
     let ret = {} as ReturnType<typeof getDependencies>
 
-    projects.forEach(v => {
-        Object.assign(ret, getDependencies(v))
-    })
+    let newWantedResourcesLength = 0
+    let wantedResourcesLength = 0
+
+    let calcWantedResourcesLength = () => {
+        newWantedResourcesLength = 0
+
+        Object.values(wantedResources).forEach(v => newWantedResourcesLength += v.length)
+
+        if (state.debug) {
+            console.log(`[aDEP] Wanted resources:`, wantedResources)
+        }
+    }
+
+    calcWantedResourcesLength()
+
+    do {
+        wantedResourcesLength = newWantedResourcesLength
+        projects.forEach(project => {
+            let dependencies = getDependencies(project, wantedResources)
+            Object.assign(ret, dependencies)
+        })
+
+        calcWantedResourcesLength()
+        if (state.debug) console.log("[aDEP]", newWantedResourcesLength, ">", wantedResourcesLength)
+    } while (newWantedResourcesLength > wantedResourcesLength)
 
     return ret
 }

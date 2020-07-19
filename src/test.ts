@@ -1,9 +1,9 @@
-import { promisify } from "util"
+import { SpawnOptions } from "child_process"
 import { writeFile } from "fs"
-import { spawn, SpawnOptions } from "child_process"
-import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./constants"
-import path = require("path")
+import { promisify } from "util"
+import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./global"
 import { executeCommand, RunnerError } from "./runner"
+import path = require("path")
 
 class TestFail extends Error { }
 
@@ -91,9 +91,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("mkdir alphaResource", "./test/portAlpha")
         await run("git init", "./test/portAlpha")
         await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
-        export
-            alphaResource
-        end
+        raw alphaResource 
 
         prepare
             echo __PREPARE_ALPHA
@@ -105,8 +103,10 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("git add .", "./test/portAlpha")
         await run(`git commit -m "Added resources"`, "./test/portAlpha")
         await promisify(writeFile)(path.join("./test/project", CONFIG_FILE_NAME), `
-        import ${path.join(process.cwd(), "./test/portAlpha")}
-            alphaResource
+        default 
+            ${path.join(process.cwd(), "./test/portAlpha")}
+                alphaResource
+            end
         end
         `)
         let installOutput = await run("ucpem install", "./test/project")
@@ -127,9 +127,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("mkdir betaResource", "./test/portBeta")
         await run("git init", "./test/portBeta")
         await promisify(writeFile)(path.join("./test/portBeta", CONFIG_FILE_NAME), `
-        export
-            betaResource
-        end
+        raw betaResource
 
         prepare
             echo __PREPARE_BETA
@@ -141,16 +139,15 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("git add .", "./test/portBeta")
         await run(`git commit -m "Added resources"`, "./test/portBeta")
         await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
-        export
-            alphaResource
-        end
-
+        
         prepare
             echo __PREPARE_ALPHA
         end
-
-        import ${path.join(process.cwd(), "./test/portBeta")}
-            betaResource
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
         end
         `)
         await run("git add .", "./test/portAlpha")
@@ -166,6 +163,77 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         if (!alphaResourceRunOut.includes("__ALPHA")) throw new TestFail("Running imported resource didn't result in expected output")
         let betaResourceRunOut = await run("node beta.js", "./test/project/betaResource.ucpem").catch(() => { throw new TestFail("Failed to run implicitly imported resource") })
         if (!betaResourceRunOut.includes("__BETA")) throw new TestFail("Running implicitly imported resource didn't result in expected output")
+    }
+
+    console.log("[TEST] Don't install depenencies for a resource that's not imported")
+    {
+        await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
+        
+        prepare
+            echo __PREPARE_ALPHA
+        end
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
+        end
+
+        res deltaResource
+            ${path.join(process.cwd(), "./test/portGamma")}
+                gammaResource
+            end
+        end
+        `)
+        await run("git add .", "./test/portAlpha")
+        await run(`git commit -m "Added added unwanted resource"`, "./test/portAlpha")
+        await run("ucpem update", "./test/project")
+        let infoOutput = run("ucpem info", "./test/project")
+        if ((await infoOutput).includes("gammaResource")) throw new TestFail("Depenencies for an unimported resource are imported")
+    }
+
+    console.log("[TEST] Import resource from self")
+    {
+        await run("mkdir portGamma", "./test")
+        await run("mkdir gammaResource", "./test/portGamma")
+        await run("git init", "./test/portGamma")
+        await promisify(writeFile)(path.join("./test/portGamma", CONFIG_FILE_NAME), `
+        raw gammaResource
+
+        prepare
+            echo __PREPARE_GAMMA
+        end
+        `)
+        await run("git add .", "./test/portGamma")
+        await run(`git commit -m "Added resources"`, "./test/portGamma")
+
+        await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
+        
+        prepare
+            echo __PREPARE_ALPHA
+        end
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
+
+            self
+                deltaResource
+            end
+        end
+
+        res deltaResource
+            ${path.join(process.cwd(), "./test/portGamma")}
+                gammaResource
+            end
+        end
+        `)
+        await run("git add .", "./test/portAlpha")
+        await run(`git commit -m "Added added wanted resource"`, "./test/portAlpha")
+
+        let installOutput = await run("ucpem update", "./test/project")
+        if (!installOutput.includes("__PREPARE_GAMMA")) throw new TestFail("Prepare script in portGamma not run")
     }
 
     process.exit(0)

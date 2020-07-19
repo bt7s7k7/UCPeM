@@ -6,7 +6,7 @@
     "scripts": {
         "build": "tsc",
         "prepare": "npm run build",
-        "test": "npm link && node build/test.js"
+        "test": "npm link --force && node build/test.js"
     },
     "files": [
         "build/**/*",

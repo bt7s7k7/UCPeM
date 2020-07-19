@@ -1,11 +1,10 @@
-import { getProject, IProject, getAllExports, getImportedProjects, getAllDependencies as getAllImports, IDependency, IPort, runPrepare, getDependencies as getImports, getExports } from "./project";
-import { exec } from "child_process";
-import { promisify } from "util";
-import { executeCommand } from "./runner";
-import { MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./constants";
-import path = require("path");
-import { mkdir, symlink } from "fs";
-import { performance } from "perf_hooks";
+import { mkdir, symlink } from "fs"
+import { performance } from "perf_hooks"
+import { promisify } from "util"
+import { MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./global"
+import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, runPrepare } from "./project"
+import { executeCommand } from "./runner"
+import path = require("path")
 
 
 export async function install(folder: string, forceUpdate = false) {

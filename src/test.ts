@@ -1,7 +1,7 @@
 import { SpawnOptions } from "child_process"
 import { writeFile } from "fs"
 import { promisify } from "util"
-import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./constants"
+import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./global"
 import { executeCommand, RunnerError } from "./runner"
 import path = require("path")
 
@@ -103,7 +103,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         await run("git add .", "./test/portAlpha")
         await run(`git commit -m "Added resources"`, "./test/portAlpha")
         await promisify(writeFile)(path.join("./test/project", CONFIG_FILE_NAME), `
-        res project 
+        default 
             ${path.join(process.cwd(), "./test/portAlpha")}
                 alphaResource
             end

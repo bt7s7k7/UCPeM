@@ -165,6 +165,33 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
         if (!betaResourceRunOut.includes("__BETA")) throw new TestFail("Running implicitly imported resource didn't result in expected output")
     }
 
+    console.log("[TEST] Don't install depenencies for a resource that's not imported")
+    {
+        await promisify(writeFile)(path.join("./test/portAlpha", CONFIG_FILE_NAME), `
+        
+        prepare
+            echo __PREPARE_ALPHA
+        end
+        
+        res alphaResource
+            ${path.join(process.cwd(), "./test/portBeta")}
+                betaResource
+            end
+        end
+
+        res deltaResource
+            INVALID
+                gammaResource
+            end
+        end
+        `)
+        await run("git add .", "./test/portAlpha")
+        await run(`git commit -m "Added added unwanted resource"`, "./test/portAlpha")
+        await run("ucpem update", "./test/project")
+        let infoOutput = run("ucpem info", "./test/project")
+        if ((await infoOutput).includes("gammaResource")) throw new TestFail("Depenencies for an unimported resource are imported")
+    }
+
     process.exit(0)
 })().catch((err) => {
     if (err instanceof TestFail) {

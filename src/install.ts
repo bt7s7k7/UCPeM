@@ -2,7 +2,7 @@ import { mkdir, symlink } from "fs"
 import { performance } from "perf_hooks"
 import { promisify } from "util"
 import { MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./global"
-import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, runPrepare } from "./project"
+import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
 import { executeCommand } from "./runner"
 import path = require("path")
 
@@ -10,8 +10,9 @@ import path = require("path")
 export async function install(folder: string, forceUpdate = false) {
     let startTime = performance.now()
     let project = await getProject(folder)
+    let wantedResources = makeAllExportsWanted(project)
 
-    let missing = await getMissingResources(project)
+    let missing = await getMissingResources(project, wantedResources)
 
     if (!forceUpdate && missing.length == 0) {
         console.log(MSG_NO_MISSING_DEPENDENCIES)
@@ -20,7 +21,7 @@ export async function install(folder: string, forceUpdate = false) {
 
     { // Updating all ports
         let imported = await getImportedProjects(project)
-        let imports = await getAllImports([project, ...imported])
+        let imports = await getAllImports([project, ...imported], wantedResources)
         for (let importedProject of imported) {
             let output = await executeCommand("git pull", importedProject.path)
             if (!output.includes("Already up to date.")) {
@@ -30,7 +31,7 @@ export async function install(folder: string, forceUpdate = false) {
         }
     }
 
-    missing = await getMissingResources(project)
+    missing = await getMissingResources(project, wantedResources)
 
     if (forceUpdate && missing.length == 0) {
         console.log(MSG_NO_MISSING_DEPENDENCIES)
@@ -51,7 +52,7 @@ export async function install(folder: string, forceUpdate = false) {
         })
 
         let imported = await getImportedProjects(project)
-        let imports = await getAllImports([project, ...imported])
+        let imports = await getAllImports([project, ...imported], wantedResources)
 
         for (let port of Object.values(ports)) {
             console.log(`Preparing to install: ${"\n"}  ${port.name} : ${port.path}${"\n"}`)
@@ -59,12 +60,12 @@ export async function install(folder: string, forceUpdate = false) {
             await executeCommand(`git clone ${port.path} ${folder}`, portsFolder)
             let importedProject = await getProject(folder)
             await runPrepare(importedProject, project)
-            let imports = await getAllImports([project, ...imported])
+            let imports = await getAllImports([project, ...imported], wantedResources)
             await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
             console.log("")
         }
 
-        missing = await getMissingResources(project)
+        missing = await getMissingResources(project, wantedResources)
 
         if (missing.length > 0) {
             let newMissing = new Set<string>(missing.map(v => v.id))
@@ -82,11 +83,11 @@ export async function install(folder: string, forceUpdate = false) {
     process.exit(0)
 }
 
-export async function getMissingResources(project: IProject) {
+export async function getMissingResources(project: IProject, wantedResources: WantedResources) {
     let importedProjects = await getImportedProjects(project)
 
     let exports = getAllExports(importedProjects)
-    let imports = getAllImports([project, ...importedProjects])
+    let imports = getAllImports([project, ...importedProjects], wantedResources)
 
     let missing = [] as IDependency[]
 

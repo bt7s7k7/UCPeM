@@ -34,6 +34,8 @@ export interface IProject extends IConfig { }
 export const PREPARE_TYPES = ["shell", "node"] as const
 export type PrepareType = (typeof PREPARE_TYPES)[number]
 
+export type WantedResources = Record<string, string[]>
+
 const DEFAULT_RESOURCE_NAME = "$"
 
 export function parseConfigFile(content: string, folder: string) {
@@ -296,7 +298,7 @@ export function getResourceId(port: IPort, resource: IResource) {
     return port.name + "!" + resource.name
 }
 
-export function getDependencies(project: IProject, wantedResources: Record<string, string[]>) {
+export function getDependencies(project: IProject, wantedResources: WantedResources) {
     let dependencies = {} as Record<string, IDependency>
 
     let includeExported = (exported: IDependency) => {
@@ -363,7 +365,7 @@ export function getExports(project: IProject) {
     return exports
 }
 
-export function getAllDependencies(projects: IProject[], wantedResources: Record<string, string[]>) {
+export function getAllDependencies(projects: IProject[], wantedResources: WantedResources) {
     let ret = {} as ReturnType<typeof getDependencies>
 
     let newWantedResourcesLength = 0

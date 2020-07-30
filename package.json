@@ -5,8 +5,7 @@
     "main": "build/app.js",
     "scripts": {
         "build": "tsc --incremental",
-        "prepare": "npm run build",
-        "test": "npm link --force && node build/test.js"
+        "test": "npm run build && npm link --force && node build/test.js"
     },
     "files": [
         "build/**/*",

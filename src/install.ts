@@ -57,7 +57,7 @@ export async function install(folder: string, forceUpdate = false) {
         for (let port of Object.values(ports)) {
             console.log(`Preparing to install: ${"\n"}  ${port.name} : ${port.path}${"\n"}`)
             let folder = path.join(portsFolder, port.name)
-            await executeCommand(`git clone ${port.path} ${folder}`, portsFolder)
+            await executeCommand(`git clone "${port.path}" "${folder}"`, portsFolder)
             let importedProject = await getProject(folder)
             await runPrepare(importedProject, project)
             let imports = await getAllImports([project, ...imported], wantedResources)

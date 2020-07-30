@@ -121,8 +121,7 @@ export function parseConfigFile(content: string, folder: string) {
             if (line == "end") {
                 state = "normal"
             } else {
-                if (words.length > 1) throw new UserError(`Port name cannot contain whitespace at ${getPos()}`)
-                let portName = words[0]
+                let portName = words.join(" ")
 
                 if (portName == "self") {
                     portName = folder

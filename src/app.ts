@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { inspect } from "util"
 import { state } from "./global"
-import { createResourceLinks, install } from "./install"
+import { createResourceLinks, flushCreatedLinks, install } from "./install"
 import { getAllDependencies, getAllExports, getDependencies, getExports, getImportedProjects, getProject, makeAllExportsWanted, runPrepare } from "./project"
 import { UserError } from "./UserError"
 
@@ -87,9 +87,12 @@ var commads = {
             let project = await getProject(".")
             let imported = await getImportedProjects(project)
             let imports = getAllExports([project, ...imported])
+            let createdLinks = new Set<string>()
             for (let importedProject of imported) {
-                await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
+                await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             }
+
+            await flushCreatedLinks(project, createdLinks)
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

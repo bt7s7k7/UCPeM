@@ -159,9 +159,9 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
 
     console.log("[TEST] Running script in imported resources")
     {
-        let alphaResourceRunOut = await run("node alpha.js", "./test/project/alphaResource.ucpem").catch(() => { throw new TestFail("Failed to run imported resource") })
+        let alphaResourceRunOut = await run("node alpha.js", "./test/project/alphaResource").catch(() => { throw new TestFail("Failed to run imported resource") })
         if (!alphaResourceRunOut.includes("__ALPHA")) throw new TestFail("Running imported resource didn't result in expected output")
-        let betaResourceRunOut = await run("node beta.js", "./test/project/betaResource.ucpem").catch(() => { throw new TestFail("Failed to run implicitly imported resource") })
+        let betaResourceRunOut = await run("node beta.js", "./test/project/betaResource").catch(() => { throw new TestFail("Failed to run implicitly imported resource") })
         if (!betaResourceRunOut.includes("__BETA")) throw new TestFail("Running implicitly imported resource didn't result in expected output")
     }
 

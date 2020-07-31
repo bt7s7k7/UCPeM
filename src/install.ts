@@ -1,7 +1,7 @@
-import { mkdir, symlink } from "fs"
+import { mkdir, readFile, symlink, writeFile } from "fs"
 import { performance } from "perf_hooks"
 import { promisify } from "util"
-import { MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./global"
+import { GITIGNORE_SECTION_BEGIN, MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./global"
 import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
 import { executeCommand } from "./runner"
 import path = require("path")
@@ -19,6 +19,8 @@ export async function install(folder: string, forceUpdate = false) {
         process.exit(0)
     }
 
+    let createdLinks = new Set<string>()
+
     { // Updating all ports
         let imported = await getImportedProjects(project)
         let imports = await getAllImports([project, ...imported], wantedResources)
@@ -26,7 +28,7 @@ export async function install(folder: string, forceUpdate = false) {
             let output = await executeCommand("git pull", importedProject.path)
             if (!output.includes("Already up to date.")) {
                 await runPrepare(await getProject(importedProject.path), project)
-                await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
+                await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             }
         }
     }
@@ -36,6 +38,7 @@ export async function install(folder: string, forceUpdate = false) {
     if (forceUpdate && missing.length == 0) {
         console.log(MSG_NO_MISSING_DEPENDENCIES)
         console.log("\n", `Done! Took ${performance.now() - startTime} ms`)
+        await flushCreatedLinks(project, createdLinks)
         process.exit(0)
     }
 
@@ -61,7 +64,7 @@ export async function install(folder: string, forceUpdate = false) {
             let importedProject = await getProject(folder)
             await runPrepare(importedProject, project)
             let imports = await getAllImports([project, ...imported], wantedResources)
-            await createResourceLinks(project, new Set(Object.keys(imports)), importedProject)
+            await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             console.log("")
         }
 
@@ -80,6 +83,7 @@ export async function install(folder: string, forceUpdate = false) {
     }
 
     console.log("\n", `Done! Took ${performance.now() - startTime} ms`)
+    await flushCreatedLinks(project, createdLinks)
     process.exit(0)
 }
 
@@ -100,21 +104,49 @@ export async function getMissingResources(project: IProject, wantedResources: Wa
     return missing
 }
 
-export async function createResourceLinks(project: IProject, imports: Set<string>, portProject: IProject) {
+export async function createResourceLinks(project: IProject, imports: Set<string>, portProject: IProject, createdLinks: Set<string>) {
     let exports = getExports(portProject)
 
-    await Promise.all(Object.values(exports).map(async dependency => {
-        if (imports.has(dependency.id)) {
-            let link = path.join(project.path, dependency.resource.name) + ".ucpem"
-            let target = path.join(portProject.path, dependency.resource.name)
-            console.log(`Linking ${link} to ${target}...`)
-            await promisify(symlink)(target, link, "junction").catch((err: NodeJS.ErrnoException) => {
-                if (err.code == "EEXIST") {
-                    return
-                } else {
-                    throw err
-                }
-            })
+    let linksToCreate = Object.values(exports).filter(dependency => imports.has(dependency.id)).map(dependency => {
+        let name = dependency.resource.name
+        let link = path.join(project.path, name)
+        let target = path.join(portProject.path, name)
+
+        return {
+            name,
+            link,
+            target
         }
+    })
+
+    await Promise.all(linksToCreate.map(async ({ link, target }) => {
+        await promisify(symlink)(target, link, "junction").catch((err: NodeJS.ErrnoException) => {
+            if (err.code == "EEXIST") {
+                return
+            } else {
+                console.log("[ERR]", err.stack)
+            }
+        })
+        console.log(`Linked ${link} → ${target}`)
     }))
-}   
+
+
+    linksToCreate.map(v => v.name).forEach(v => createdLinks.add(v))
+}
+
+export async function flushCreatedLinks(project: IProject, createdLinks: Set<string>) {
+    let ignoreFiles = [
+        GITIGNORE_SECTION_BEGIN,
+        PORT_FOLDER_NAME,
+        ...createdLinks
+    ]
+
+    let gitignorePath = path.join(project.path, ".gitignore")
+
+    let gitignoreText = (await promisify(readFile)(gitignorePath).catch(err => { if (err.code == "ENOENT") return ""; else throw err })).toString()
+    let ourTextStart = gitignoreText.indexOf(GITIGNORE_SECTION_BEGIN) - 1
+    let gitignorePre = ourTextStart == -2 ? gitignoreText : gitignoreText.slice(0, ourTextStart)
+    let gitignoreOutput = gitignorePre + "\n" + ignoreFiles.join("\n") + "\n"
+
+    await promisify(writeFile)(gitignorePath, gitignoreOutput)
+}

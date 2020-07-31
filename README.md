@@ -14,7 +14,7 @@ To specify default imports write:
 ```
 Port is a path for `git clone`. Resource names must be `[a-zA-Z0-9_]+`.
 
-Port must be a git clone URL. Imported resources are placed relative to the config file of the project in `${resourceName}.ucpem`. All cloned repos will be placed into a `ucpem_ports~` folder in the root of the project. 
+Port must be a git clone URL. Imported resources are placed relative to the config file of the project in a `${resourceName}` folder. All cloned repos will be placed into a `ucpem_ports~` folder in the root of the project. Don't worry about source control, a `.gitignore` file will be generated automatically.
 
 To define a resource without dependencies (also called raw resource) write:
 ```xml
@@ -67,9 +67,3 @@ Operations:
   link    - Recreates links for imported resources
 ```
 Run ucpem without arguments to view help.
-## Recommended .gitignore for projects
-```git
-# Just add
-*.ucpem
-ucpem_ports~
-```

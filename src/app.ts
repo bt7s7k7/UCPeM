@@ -14,6 +14,13 @@ var commads = {
             install(process.cwd())
         }
     },
+    _devinstall: {
+        desc: "Downloads and prepares all ports",
+        async callback() {
+            state.debug = true
+            install(process.cwd())
+        }
+    },
     update: {
         desc: "Updates all ports",
         async callback() {

@@ -11,15 +11,18 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\build\\app.js",
+            "program": "${workspaceFolder}/build/app.js",
             "outFiles": [
                 "${workspaceFolder}/build/**/*.js"
             ],
             "console": "integratedTerminal",
             "args": [
-                "prepare"
+                "update"
             ],
-            "cwd": "${workspaceFolder}/test"
+            "cwd": "${workspaceFolder}/test/project",
+            "env": {
+                "PATH": "/home/bt7s7k7/.nvm/versions/node/v14.6.0/bin:/home/bt7s7k7/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+            }
         }
     ]
 }

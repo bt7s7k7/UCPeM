@@ -1,7 +1,7 @@
 import { mkdir, readFile, symlink, writeFile } from "fs"
 import { performance } from "perf_hooks"
 import { promisify } from "util"
-import { GITIGNORE_SECTION_BEGIN, MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME } from "./global"
+import { GITIGNORE_SECTION_BEGIN, MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME, state } from "./global"
 import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
 import { executeCommand } from "./runner"
 import path = require("path")
@@ -26,6 +26,8 @@ export async function install(folder: string, forceUpdate = false) {
         let imports = await getAllImports([project, ...imported], wantedResources)
         for (let importedProject of imported) {
             let output = await executeCommand("git pull", importedProject.path)
+            imported = await getImportedProjects(project)
+            imports = await getAllImports([project, ...imported], wantedResources)
             if (!output.includes("Already up to date.")) {
                 await runPrepare(await getProject(importedProject.path), project)
                 await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
@@ -63,7 +65,9 @@ export async function install(folder: string, forceUpdate = false) {
             await executeCommand(`git clone "${port.path}" "${folder}"`, portsFolder)
             let importedProject = await getProject(folder)
             await runPrepare(importedProject, project)
-            let imports = await getAllImports([project, ...imported], wantedResources)
+            if (state.debug == true) console.log("Wanted resources:", wantedResources)
+            let imports = await getAllImports([project, importedProject, ...imported], wantedResources)
+            if (state.debug == true) console.log("Wanted resources:", wantedResources)
             await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             console.log("")
         }
@@ -105,9 +109,13 @@ export async function getMissingResources(project: IProject, wantedResources: Wa
 }
 
 export async function createResourceLinks(project: IProject, imports: Set<string>, portProject: IProject, createdLinks: Set<string>) {
-    let exports = getExports(portProject)
+    let exports = Object.values(getExports(portProject))
 
-    let linksToCreate = Object.values(exports).filter(dependency => imports.has(dependency.id)).map(dependency => {
+    if (state.debug == true) {
+        console.log(`Creating links for ${portProject.name}, imports:`, imports, "exports: ", exports.map(v => v.id))
+    }
+
+    let linksToCreate = exports.filter(dependency => imports.has(dependency.id)).map(dependency => {
         let name = dependency.resource.name
         let link = path.join(project.path, name)
         let target = path.join(portProject.path, name)

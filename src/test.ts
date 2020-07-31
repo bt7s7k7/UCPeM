@@ -1,5 +1,5 @@
 import { SpawnOptions } from "child_process"
-import { writeFile } from "fs"
+import { readFile, writeFile } from "fs"
 import { promisify } from "util"
 import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./global"
 import { executeCommand, RunnerError } from "./runner"
@@ -185,6 +185,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
             end
         end
         `)
+        await run("mkdir deltaResource", "./test/portAlpha")
         await run("git add .", "./test/portAlpha")
         await run(`git commit -m "Added added unwanted resource"`, "./test/portAlpha")
         await run("ucpem update", "./test/project")
@@ -229,11 +230,25 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
             end
         end
         `)
+
+        await promisify(writeFile)(path.join("./test/portAlpha/deltaResource", "delta.js"), `
+        console.log("__DELTA")
+        `)
+
         await run("git add .", "./test/portAlpha")
         await run(`git commit -m "Added added wanted resource"`, "./test/portAlpha")
 
         let installOutput = await run("ucpem update", "./test/project")
         if (!installOutput.includes("__PREPARE_GAMMA")) throw new TestFail("Prepare script in portGamma not run")
+
+        let deltaResourceRunOut = await run("node delta.js", "./test/project/deltaResource").catch(() => { throw new TestFail("Failed to run imported resource") })
+        if (!deltaResourceRunOut.includes("__DELTA")) throw new TestFail("Running imported resource didn't result in expected output")
+    }
+
+    console.log("[TEST] The .gitignore should correctly generated")
+    {
+        let content = (await promisify(readFile)("./test/project/.gitignore")).toString()
+        if (content != "\n# UCPeM generated, write above to not be overwritten\nucpem_ports~\nalphaResource\ndeltaResource\ngammaResource\n") throw new TestFail(".gitignore doesn't contain the correct text")
     }
 
     process.exit(0)

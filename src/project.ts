@@ -38,7 +38,7 @@ export type WantedResources = Record<string, string[]>
 
 const DEFAULT_RESOURCE_NAME = "$"
 
-export function parseConfigFile(content: string, folder: string) {
+export function parseConfigFile(content: string, folder: string, initFolder: string) {
     const lines = content.split(/\n/g)
     let prepare = [] as string[]
     let prepareType: PrepareType = "shell"
@@ -124,7 +124,7 @@ export function parseConfigFile(content: string, folder: string) {
                 let portName = words.join(" ")
 
                 if (portName == "self") {
-                    portName = folder
+                    portName = initFolder
                 }
 
                 if (!resource) throw new Error("`resource` is null in resource state")
@@ -162,7 +162,7 @@ export function parseConfigFile(content: string, folder: string) {
 
 export async function getProject(folder: string) {
     let configText = ""
-    let initFolder = folder
+    const initFolder = path.resolve(process.cwd(), folder)
 
     let tryRead = async () => {
         try {
@@ -216,7 +216,7 @@ export async function getProject(folder: string) {
 
     const absolutePath = path.resolve(process.cwd(), folder)
 
-    if (config == null) config = parseConfigFile(configText, absolutePath)
+    if (config == null) config = parseConfigFile(configText, absolutePath, initFolder)
 
     return {
         ...config,

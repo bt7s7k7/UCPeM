@@ -4,7 +4,7 @@ import { readdir, readFile, stat } from "fs"
 import * as path from "path"
 import { basename, join } from "path"
 import { promisify } from "util"
-import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, state } from "./global"
+import { CONFIG_FILE_NAME, LOCAL, PORT_FOLDER_NAME, state } from "./global"
 import { UserError } from "./UserError"
 
 export interface IResource {
@@ -15,21 +15,20 @@ export interface IResource {
 export interface IPort {
     path: string
     name: string
-    exported: Record<string, IResource>
+    resources: Record<string, IResource>
 }
 
+/** Dependency of a project, NOT of a resource (`IPort` is used for that) */
 export interface IDependency {
     port: IPort
     resource: IResource,
     id: string
 }
 
-export interface IConfig extends IPort {
+export interface IProject extends IPort {
     prepare: string[]
     prepareType: PrepareType
 }
-
-export interface IProject extends IConfig { }
 
 export const PREPARE_TYPES = ["shell", "node"] as const
 export type PrepareType = (typeof PREPARE_TYPES)[number]
@@ -39,116 +38,125 @@ export type WantedResources = Record<string, string[]>
 const DEFAULT_RESOURCE_NAME = "$"
 
 export function parseConfigFile(content: string, folder: string, initFolder: string) {
+    /** Lines in the config file */
     const lines = content.split(/\n/g)
-    let prepare = [] as string[]
+    /** All resources we export */
+    const resources = {} as Record<string, IResource>
+    /** The lines of the prepare script */
+    const prepare = [] as string[]
     let prepareType: PrepareType = "shell"
-    let exported = {} as Record<string, IResource>
 
-    var state = "normal" as "normal" | "prepare" | "resource" | "resourceImport"
-    var resource = null as IResource | null
-    var resourceImport = null as IPort | null
+    /** Current state of the parser */
+    let state = "normal" as "normal" | "prepare" | "resource" | "resourceImport"
+    /** Current resource being defined */
+    let resource = null as IResource | null
+    /** Current import in a resource being defined */
+    let resourceImport = null as IPort | null
 
-    for (let i = 0, len = lines.length; i < len; i++) {
+    for (let i = 0, len = lines.length; i < len; i++) { // For every line
+
         const getPos = () => `${folder}:${i + 1}`
+
+        const setResource = (resName: string) => {
+            if (resName in resources) { // Check if it's not a duplicate
+                throw new UserError(LOCAL.config_res_duplicate(getPos()))
+            }
+
+            resources[resName] = resource = {
+                imports: {},
+                name: resName
+            }
+
+            state = "resource"
+        }
+
+        /** Current line */
         let line = lines[i].trim()
+        /** Words of the current line */
         let words = line.split(/\s/g).filter(v => v.length > 0)
+        // Ignore comments and empty lines
         if (line[0] == "#" || line.length == 0) continue
         if (state == "normal") {
-            if (line == "prepare") {
+            if (line == "prepare") { // Specifying the prepare script
                 state = "prepare"
-            } else if (words[0] == "prepare") {
+            } else if (words[0] == "prepare") { // Specifying the prepare script with the runner type
                 if (words[1] == "using") {
                     let type = words[2] as PrepareType
-                    if (PREPARE_TYPES.includes(type)) {
-                        prepareType = type
+                    if (PREPARE_TYPES.includes(type)) { // Test if the prepare type is even real
+                        prepareType = type // If real then set it
                         state = "prepare"
                     } else {
-                        throw new UserError(`Invalid prepare type "${words[2] ?? ""}" at ${getPos()}`)
+                        throw new UserError(LOCAL.config_prepare_invalidType(words[2] ?? "", getPos()))
                     }
                 } else {
-                    throw new UserError(`Prepare keyword should have 1 or 0 arguments ("prepare" ["using" <type>]) at ${getPos()}`)
+                    throw new UserError(LOCAL.config_prepare_argErr(getPos()))
                 }
-            } else if (words[0] == "res") {
+            } else if (words[0] == "res") { // Specifying a resource
                 if (words.length == 2) {
                     const resName = words[1]
-                    if (resName in exported) {
-                        throw new UserError(`Duplicate resource definition at ${getPos()}`)
-                    }
-
-                    exported[resName] = resource = {
-                        imports: {},
-                        name: resName
-                    }
-
-                    state = "resource"
+                    setResource(resName)
                 } else {
-                    throw new UserError(`Resource keyword should have 1 argument ("res" <name>) but ${words.length - 1} found at ${getPos()}`)
+                    throw new UserError(LOCAL.config_res_argErr(getPos()))
                 }
-            } else if (line == "default") {
-                const resName = DEFAULT_RESOURCE_NAME
-                if (resName in exported) {
-                    throw new UserError(`Duplicate default resource definition at ${getPos()}`)
-                }
-
-                exported[resName] = resource = {
-                    imports: {},
-                    name: resName
-                }
-
-                state = "resource"
-            } else if (words[0] == "raw") {
+            } else if (line == "default") { // Defining the default resource
+                setResource(DEFAULT_RESOURCE_NAME)
+            } else if (words[0] == "raw") { // Defining a resource w/out imports
                 if (words.length == 2) {
                     const resName = words[1]
-                    if (resName in exported) {
-                        throw new UserError(`Duplicate resource definition at ${getPos()}`)
+                    if (resName in resources) {
+                        throw new UserError(LOCAL.config_res_duplicate(getPos()))
                     }
 
-                    exported[resName] = resource = {
+                    resources[resName] = resource = {
                         imports: {},
                         name: resName
                     }
                 } else {
-                    throw new UserError(`Raw resource keyword should have 1 argument ("raw" <name>) but ${words.length - 1} found at ${getPos()}`)
+                    throw new UserError(LOCAL.config_raw_argErr(getPos()))
                 }
-            } else throw new UserError(`Invalid keyword "${line}" at ${getPos()}`)
+            } else throw new UserError(LOCAL.config_invalidKeyword(getPos()))
         } else if (state == "prepare") {
-            if (line == "end") {
+            if (line == "end") { // If end then end
                 state = "normal"
-            } else {
+            } else { // Else we save that line into the prepare script
                 prepare.push(line)
             }
         } else if (state == "resource") {
-            if (line == "end") {
+            if (line == "end") { // If end then end
                 state = "normal"
-            } else {
-                let portName = words.join(" ")
+            } else { // Else it's a port to import from
+                let portName = line
 
-                if (portName == "self") {
+                if (portName == "self") { // If it's self, substitute the folder of the project
                     portName = initFolder
                 }
 
+                // Assert we are editing a resource
                 if (!resource) throw new Error("`resource` is null in resource state")
 
-                if (portName in resource.imports) {
-                    throw new UserError(`Duplicate port ${portName} in resource ${resource.name} at ${getPos()}`)
+                if (portName in resource.imports) { // Check if it's a duplicate
+                    throw new UserError(LOCAL.config_port_duplicate(portName, resource.name, getPos()))
                 }
 
                 resourceImport = resource.imports[portName] = {
                     path: portName,
                     name: path.basename(portName, path.extname(portName)),
-                    exported: {}
+                    resources: {}
                 }
 
                 state = "resourceImport"
             }
         } else if (state == "resourceImport") {
-            if (line == "end") {
+            if (line == "end") { // If end then end
                 state = "resource"
                 resourceImport = null
-            } else {
+            } else { // Else add the resource to the port
+                // Assert we are editing an import
                 if (!resourceImport) throw new Error("`resourceImport` is null in resourceImport state")
-                if (words.length > 1) throw new UserError(`Resource name cannot contain whitespace at ${getPos()}`)
-                resourceImport.exported[words[0]] = { name: words[0], imports: {} }
+                // Make sure there is no whitespace
+                if (words.length > 1) throw new UserError(LOCAL.config_import_whitespace(getPos()))
+
+                resourceImport.resources[words[0]] = { name: words[0], imports: {} }
             }
         }
     }
@@ -156,15 +164,19 @@ export function parseConfigFile(content: string, folder: string, initFolder: str
     return {
         prepare,
         prepareType,
-        exported
-    } as IConfig
+        resources
+    } as IProject
 }
 
+/** Gets the project at the path */
 export async function getProject(folder: string) {
+    /** Text in the config file */
     let configText = ""
+    /** The folder we started searching in */
     const initFolder = path.resolve(process.cwd(), folder)
 
-    let tryRead = async () => {
+    /** Try to find a config file at the current path */
+    const tryRead = async () => {
         try {
             configText = (await promisify(readFile)(path.join(path.resolve(process.cwd(), folder), CONFIG_FILE_NAME))).toString()
         } catch (err) {
@@ -178,33 +190,33 @@ export async function getProject(folder: string) {
         return true
     }
 
-    let tryFolder = async (name: string) => {
+    /** Check if the folder exists */
+    const tryFolder = async (name: string) => {
         let stats = await promisify(stat)(path.resolve(process.cwd(), folder, name)).catch(() => { })
         if (stats) return stats.isDirectory()
         else return false
     }
 
-    let config = null as IConfig | null
+    let config = null as IProject | null
 
-    if (!(await tryRead())) {
+    if (!(await tryRead())) { // First try the root
         folder = join(folder, "Assets/UCPeM")
-        if (!(await tryRead())) {
-            folder = path.resolve(folder, "../..")
+        if (!(await tryRead())) { // Then try ↑ that
+            folder = path.resolve(folder, "../..") // If not return to root
 
-            if (await tryFolder("src")) {
+            if (await tryFolder("src")) { // Try src folder
                 folder = path.join(folder, "src")
-            }
-
-            if (await tryFolder("Assets")) {
+            } else if (await tryFolder("Assets")) { // Else try assets folder
                 folder = path.resolve(folder, "./Assets")
             }
 
-            if (!(await tryRead())) {
-                let dirEntries = await promisify(readdir)(folder)
-                let directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
+            if (!(await tryRead())) { // If we still didn't find a config file
+                const dirEntries = await promisify(readdir)(folder)
+                const directories = (await Promise.all(dirEntries.map(v => promisify(stat)(path.resolve(folder, v))))).map((v, i) => [dirEntries[i], v.isDirectory()] as const).filter(v => v[1]).map(v => v[0])
 
+                // Make a project exporting all folders we can find
                 config = {
-                    exported: Object.assign({}, ...directories.map(v => ({ [v]: { name: v, imports: {} } }))),
+                    resources: Object.assign({}, ...directories.map(v => ({ [v]: { name: v, imports: {} } }))),
                     prepare: [],
                     path: folder,
                     name: path.basename(folder),
@@ -225,18 +237,17 @@ export async function getProject(folder: string) {
     } as IProject
 }
 
-export async function getImportedProjects(project: IProject) {
-    let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
-    let folders = await promisify(readdir)(portsFolder).catch(v => [] as string[])
+export async function getClonedImports(project: IProject) {
+    const portsFolder = path.join(project.path, PORT_FOLDER_NAME)
+    /** All files found in the portsFolder */
+    const files = await promisify(readdir)(portsFolder).catch(v => [] as string[])
 
-    let projectsArray = (await Promise.all(folders.map(async portName => {
-        let portFolder = path.join(portsFolder, portName)
-        let stats = await promisify(stat)(portFolder).catch(v => null)
-
-        if (stats != null && stats.isDirectory()) {
-            let project = getProject(portFolder)
-            return project
-        } else return null
+    const projectsArray = (await Promise.all(files.map(async portName => { // For every file in the ports folder
+        const portFolder = path.join(portsFolder, portName)
+        const stats = await promisify(stat)(portFolder).catch(v => null)
+        // Check if it's real and a directory
+        if (stats != null && stats.isDirectory()) return getProject(portFolder)
+        else return null
     }))).filter(v => v != null) as IProject[]
 
     return projectsArray
@@ -244,12 +255,13 @@ export async function getImportedProjects(project: IProject) {
 
 export function runPrepare(project: IProject, parentProject: IProject | null) {
     return new Promise<void>((resolve, reject) => {
+        // If the prepare script is empty just return
         if (project.prepare.length == 0) return resolve()
 
-        console.log(`[PRE] Running prepare script for '${project.name}'`)
+        console.log(LOCAL.prepare_running(project.name))
 
-        let prepareRunners = {
-            shell: () => {
+        const prepareRunners = {
+            shell: () => { // Shell runner
                 const command = project.prepare.join(" && ")
                 const childProcess = spawn(command, [], {
                     cwd: project.path,
@@ -270,11 +282,11 @@ export function runPrepare(project: IProject, parentProject: IProject | null) {
                     if (code == 0) {
                         resolve()
                     } else {
-                        reject(new UserError(`Prepare script failed with error code ${code} '${project.name}'`))
+                        reject(new UserError(LOCAL.prepare_fail(code ?? -1)))
                     }
                 })
             },
-            node: () => {
+            node: () => { // Node runner
                 let code = project.prepare.join("\n")
                 let compiled = new Function("OWN_NAME", "OWN_PATH", "IS_PORT", "PROJECT_PATH", "PROJECT_NAME", "path", "fs", code)
 
@@ -292,7 +304,9 @@ export function runPrepare(project: IProject, parentProject: IProject | null) {
 
         let runner = prepareRunners[project.prepareType]
 
+        // Assert the runner exists
         if (runner == null) throw new Error(`Project has specified unknown runner ${project.prepareType}`)
+        // Run it
         runner()
     })
 }
@@ -301,12 +315,13 @@ export function getResourceId(port: IPort, resource: IResource) {
     return port.name + "!" + resource.name
 }
 
-export function getDependencies(project: IProject, wantedResources: WantedResources) {
-    let dependencies = {} as Record<string, IDependency>
+export function getImports(project: IProject, wantedResources: WantedResources) {
+    const dependencies = {} as Record<string, IDependency>
 
-    let includeExported = (exported: IDependency) => {
+    /** Adds the import of the provided dependency to the return value */
+    const includeExported = (exported: IDependency) => {
         Object.values(exported.resource.imports).forEach(port => {
-            Object.values(port.exported).forEach(resource => {
+            Object.values(port.resources).forEach(resource => {
                 let id = getResourceId(port, resource)
                 dependencies[id] = {
                     id,
@@ -317,7 +332,8 @@ export function getDependencies(project: IProject, wantedResources: WantedResour
         })
     }
 
-    let exports = getExports(project)
+    /** All exports from the project */
+    const exports = getExports(project)
 
     if (project.name in wantedResources) { // Get if we even want anything from this project
         let wanted = wantedResources[project.name]
@@ -325,7 +341,7 @@ export function getDependencies(project: IProject, wantedResources: WantedResour
             if (v in exports) { // Test if we have it, then add all dependencies of that resource to the dependencies
                 includeExported(exports[v])
             } else {
-                throw new Error(`Failed to resolve ${v}, resource not exported`)
+                throw new UserError(LOCAL.import_resolveFail(v))
             }
         })
     }
@@ -335,10 +351,10 @@ export function getDependencies(project: IProject, wantedResources: WantedResour
 
     if (state.debug) {
         console.log("[lDEP]", project.name, dependencies)
-        console.log("     |", wantedResources)
+        console.log("-----→", wantedResources)
     }
 
-    Object.values(dependencies).forEach(dependency => {
+    Object.values(dependencies).forEach(dependency => { // For each dependency add it to the wanted resources
         let portName = dependency.port.name
         if (!(portName in wantedResources)) {
             wantedResources[portName] = []
@@ -347,20 +363,23 @@ export function getDependencies(project: IProject, wantedResources: WantedResour
     })
 
     if (state.debug) {
-        console.log("     |", wantedResources)
+        console.log("-----→", wantedResources)
     }
 
     return dependencies
 }
 
+/**
+ * Returns wanted resources that contain all exported resources from the provided project
+ */
 export function makeAllExportsWanted(project: IProject) {
-    return { [project.name]: Object.values(project.exported).map(v => getResourceId(project, v)) }
+    return { [project.name]: Object.values(project.resources).map(v => getResourceId(project, v)) }
 }
 
 export function getExports(project: IProject) {
     let exports = {} as Record<string, IDependency>
 
-    Object.values(project.exported).forEach(resource => {
+    Object.values(project.resources).forEach(resource => {
         let id = getResourceId(project, resource)
         exports[id] = { port: project, resource, id }
     })
@@ -368,13 +387,16 @@ export function getExports(project: IProject) {
     return exports
 }
 
-export function getAllDependencies(projects: IProject[], wantedResources: WantedResources) {
-    let ret = {} as ReturnType<typeof getDependencies>
+/** 
+ * Return all the imports for all the projects. Don't forget to include the root project.
+ */
+export function getAllImports(projects: IProject[], wantedResources: WantedResources) {
+    const imports = {} as ReturnType<typeof getImports>
 
     let newWantedResourcesLength = 0
     let wantedResourcesLength = 0
 
-    let calcWantedResourcesLength = () => {
+    const updateWantedResourcesLength = () => {
         newWantedResourcesLength = 0
 
         Object.values(wantedResources).forEach(v => newWantedResourcesLength += v.length)
@@ -384,22 +406,25 @@ export function getAllDependencies(projects: IProject[], wantedResources: Wanted
         }
     }
 
-    calcWantedResourcesLength()
+    updateWantedResourcesLength()
 
-    do {
+    do { // Add imports from projects based on wanted resources, if we start to want more resources do it again, so we satisfy all wanted resources
         wantedResourcesLength = newWantedResourcesLength
         projects.forEach(project => {
-            let dependencies = getDependencies(project, wantedResources)
-            Object.assign(ret, dependencies)
+            let dependencies = getImports(project, wantedResources)
+            Object.assign(imports, dependencies)
         })
 
-        calcWantedResourcesLength()
+        updateWantedResourcesLength()
         if (state.debug) console.log("[aDEP]", newWantedResourcesLength, ">", wantedResourcesLength)
     } while (newWantedResourcesLength > wantedResourcesLength)
 
-    return ret
+    return imports
 }
 
+/** 
+ * Return all the exports for all the projects. Don't forget to include the root project.
+ */
 export function getAllExports(projects: IProject[]) {
     let ret = {} as ReturnType<typeof getExports>
 

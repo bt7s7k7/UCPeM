@@ -1,57 +1,55 @@
 #!/usr/bin/env node
 import { inspect } from "util"
-import { state } from "./global"
-import { createResourceLinks, flushCreatedLinks, install } from "./install"
-import { getAllDependencies, getAllExports, getDependencies, getExports, getImportedProjects, getProject, makeAllExportsWanted, runPrepare } from "./project"
+import { LOCAL, state } from "./global"
+import { createResourceLinks, install, writeGitignore } from "./install"
+import { getAllExports, getAllImports, getClonedImports, getExports, getImports, getProject, makeAllExportsWanted, runPrepare } from "./project"
 import { UserError } from "./UserError"
 
-const args = process.argv.slice(2)
-
-var commads = {
+const commands = {
     install: {
-        desc: "Downloads and prepares all ports",
+        desc: LOCAL.help_desc_install,
         async callback() {
-            install(process.cwd())
+            await install(process.cwd())
         }
     },
     _devinstall: {
-        desc: "Downloads and prepares all ports",
+        desc: "",
         async callback() {
             state.debug = true
-            install(process.cwd())
+            await install(process.cwd())
         }
     },
     update: {
-        desc: "Updates all ports",
+        desc: LOCAL.help_desc_update,
         async callback() {
-            install(process.cwd(), true)
+            await install(process.cwd(), true)
         }
     },
     prepare: {
-        desc: "Runs the prepare script for this package",
+        desc: LOCAL.help_desc_prepare,
         async callback() {
             let project = await getProject(".")
             await runPrepare(project, null)
-            let imported = await getImportedProjects(project)
+            let imported = await getClonedImports(project)
             for (let importedProject of imported) {
                 await runPrepare(importedProject, project)
             }
         }
     },
     info: {
-        desc: "Prints imports and config files of the current project",
+        desc: LOCAL.help_desc_info,
         async callback() {
             let project = await getProject(".")
             let wantedResources = makeAllExportsWanted(project)
             console.log(`Project ${project.name} at ${project.path}`)
             console.log(`  Imports:`)
-            Object.keys(getDependencies(project, wantedResources)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getImports(project, wantedResources)).forEach(v => console.log(`    ${v}`))
             console.log(`  Exports:`)
             Object.keys(getExports(project)).filter(v => !v.includes("$")).forEach(v => console.log(`    ${v}`))
             console.log(`Implicit:`)
-            let importedProjects = await getImportedProjects(project)
+            let importedProjects = await getClonedImports(project)
             console.log(`  Imports:`)
-            Object.keys(getAllDependencies(importedProjects, wantedResources)).forEach(v => console.log(`    ${v}`))
+            Object.keys(getAllImports(importedProjects, wantedResources)).forEach(v => console.log(`    ${v}`))
             console.log(`  Exports:`)
             Object.keys(getAllExports(importedProjects)).filter(v => !v.includes("$")).forEach(v => console.log(`    ${v}`))
 
@@ -64,11 +62,11 @@ var commads = {
 
             let project = await getProject(".")
             let wantedResources = makeAllExportsWanted(project)
-            let importedProjects = await getImportedProjects(project)
+            let importedProjects = await getClonedImports(project)
 
-            let projectDependencies = getDependencies(project, wantedResources)
+            let projectDependencies = getImports(project, wantedResources)
             let allExports = getAllExports(importedProjects)
-            let allDependencies = getAllDependencies(importedProjects, wantedResources)
+            let allDependencies = getAllImports(importedProjects, wantedResources)
 
             console.log("----------------------------")
             console.log("|         Project          |")
@@ -89,32 +87,38 @@ var commads = {
         }
     },
     link: {
-        desc: "Recreates links for imported resources",
+        desc: LOCAL.help_desc_link,
         async callback() {
             let project = await getProject(".")
-            let imported = await getImportedProjects(project)
+            let imported = await getClonedImports(project)
             let imports = getAllExports([project, ...imported])
             let createdLinks = new Set<string>()
             for (let importedProject of imported) {
                 await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             }
 
-            await flushCreatedLinks(project, createdLinks)
+            await writeGitignore(project, createdLinks)
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>
 
-if (args.length == 0 || !(args[0] in commads)) {
-    let commandDefs = Object.entries(commads).filter(v => v[0][0] != "_")
-    let maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v[0].length), 0) + 1
-    console.log("Usage:\n  ucpem <operation>\n\nOperations:")
+const args = process.argv.slice(2)
+
+if (args.length == 0 || !(args[0] in commands)) {
+    /** All command definitions, excluding the development ones (defined by "_" prefix) */
+    const commandDefs = Object.entries(commands).filter(v => v[0][0] != "_")
+    /** The length of the longest command (+1 for padding), so we can put all command descs at the same x pos */
+    const maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v[0].length), 0) + 1
+
+    console.log(LOCAL.help_usage)
     commandDefs.forEach(v => {
         console.log(`  ${v[0]}${" ".repeat(maxNameLength - v[0].length)}- ${v[1].desc}`)
     })
 
     process.exit(1)
 } else {
-    commads[args[0]].callback().catch(err => {
+    // Call the callback of the specified command and handle errors
+    commands[args[0]].callback().catch(err => {
         if (err instanceof UserError) {
             console.error(`[ERR] ${err.message}`)
             process.exit(1)

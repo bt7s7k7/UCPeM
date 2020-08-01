@@ -1,7 +1,8 @@
 import { SpawnOptions } from "child_process"
 import { readFile, writeFile } from "fs"
+import { performance } from "perf_hooks"
 import { promisify } from "util"
-import { CONFIG_FILE_NAME, MSG_NO_MISSING_DEPENDENCIES } from "./global"
+import { CONFIG_FILE_NAME, LOCAL } from "./global"
 import { executeCommand, RunnerError } from "./runner"
 import path = require("path")
 
@@ -20,6 +21,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
 }
 
 (async () => {
+    const startTime = performance.now()
     console.log(`[SETUP] Creating testing folder...`)
     await run("rm -rf test && mkdir test", ".")
 
@@ -117,7 +119,7 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
     console.log("[TEST] Stop the install when no missing dependencies")
     {
         let output = await run("ucpem install", "./test/project")
-        if (!output.includes(MSG_NO_MISSING_DEPENDENCIES)) throw new TestFail("Expected no missing dependencies message")
+        if (!output.includes(LOCAL.install_noMissingResources)) throw new TestFail("Expected no missing dependencies message")
         console.log("[SUCCESS]")
     }
 
@@ -248,8 +250,16 @@ function run(command: string, cwd: string, options: SpawnOptions = {}) {
     console.log("[TEST] The .gitignore should correctly generated")
     {
         let content = (await promisify(readFile)("./test/project/.gitignore")).toString()
-        if (content != "\n# UCPeM generated, write above to not be overwritten\nucpem_ports~\nalphaResource\ndeltaResource\ngammaResource\n") throw new TestFail(".gitignore doesn't contain the correct text")
+        if (
+            !content.includes("alphaResource") ||
+            !content.includes("deltaResource") ||
+            !content.includes("betaResource") ||
+            !content.includes("gammaResource")
+        ) throw new TestFail(".gitignore doesn't contain the correct text")
     }
+
+    console.log()
+    console.log(`[SUCCESS] All tests passed, took ${performance.now() - startTime}ms`)
 
     process.exit(0)
 })().catch((err) => {

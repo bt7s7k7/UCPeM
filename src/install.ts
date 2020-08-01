@@ -1,98 +1,131 @@
 import { mkdir, readFile, symlink, writeFile } from "fs"
 import { performance } from "perf_hooks"
 import { promisify } from "util"
-import { GITIGNORE_SECTION_BEGIN, MSG_NO_MISSING_DEPENDENCIES, PORT_FOLDER_NAME, state } from "./global"
-import { getAllDependencies as getAllImports, getAllExports, getExports, getImportedProjects, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
+import { GITIGNORE_SECTION_BEGIN, LOCAL, PORT_FOLDER_NAME, state } from "./global"
+import { getAllExports, getAllImports as getAllImports, getClonedImports, getExports, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
 import { executeCommand } from "./runner"
 import path = require("path")
 
-
+/**
+ * Clones and links all imports
+ * @param folder Path to the project
+ * @param forceUpdate If we should pull all imports event if there are no missing resources
+ */
 export async function install(folder: string, forceUpdate = false) {
-    let startTime = performance.now()
-    let project = await getProject(folder)
-    let wantedResources = makeAllExportsWanted(project)
+    const startTime = performance.now()
+    const project = await getProject(folder)
+    const wantedResources = makeAllExportsWanted(project)
 
     let missing = await getMissingResources(project, wantedResources)
 
-    if (!forceUpdate && missing.length == 0) {
-        console.log(MSG_NO_MISSING_DEPENDENCIES)
+    if (!forceUpdate && missing.length == 0) { // If we aren't missing anything, exit
+        console.log(LOCAL.install_noMissingResources)
         process.exit(0)
     }
 
-    let createdLinks = new Set<string>()
+    /** Links created, to be put in .gitignore */
+    const createdLinks = new Set<string>()
 
     { // Updating all ports
-        let imported = await getImportedProjects(project)
+        /** All cloned ports */
+        let imported = await getClonedImports(project)
+        /** All imported resources */
         let imports = await getAllImports([project, ...imported], wantedResources)
-        for (let importedProject of imported) {
+        /** If any imports changed */
+        let anyChanged = false
+        for (let importedProject of imported) { // For each project
+            // Pull from remote
             let output = await executeCommand("git pull", importedProject.path)
-            imported = await getImportedProjects(project)
+            // Refresh
+            imported = await getClonedImports(project)
             imports = await getAllImports([project, ...imported], wantedResources)
-            if (!output.includes("Already up to date.")) {
-                await runPrepare(await getProject(importedProject.path), project)
+
+            if (!output.includes("Already up to date.")) { // If there were any updates
+                anyChanged = true // Mark that
+                await runPrepare(await getProject(importedProject.path), project) // Rerun the prepare
+            }
+        }
+
+        if (anyChanged) { // If any imports changed
+            for (let importedProject of imported) {
+                // Redo the links, so if any projects that updated have new dependencies, they will be linked
                 await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
             }
         }
     }
 
+    // Update missing resources
     missing = await getMissingResources(project, wantedResources)
 
-    if (forceUpdate && missing.length == 0) {
-        console.log(MSG_NO_MISSING_DEPENDENCIES)
-        console.log("\n", `Done! Took ${performance.now() - startTime} ms`)
-        await flushCreatedLinks(project, createdLinks)
+    if (missing.length == 0) { // If we don't miss anything → done!
+        console.log(LOCAL.install_noMissingResources)
+        console.log(LOCAL.install_done(performance.now() - startTime))
+        await writeGitignore(project, createdLinks)
         process.exit(0)
     }
 
+    /** Missing resources last cycle */
     let lastMissing = new Set<string>(missing.map(v => v.id))
-
+    /** Path to folder with imports */
     let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
-
+    /** Create the import folder, incase it doesn't exist */
     await promisify(mkdir)(portsFolder).catch(v => v)
 
-    while (missing.length > 0) {
-        let ports = {} as Record<string, IPort>
-        missing.forEach(v => {
-            ports[v.port.path] = v.port
-        })
+    while (missing.length > 0) { // While we are missing resources
+        /** Ports we need to get the required resources */
+        const ports = Object.assign({}, ...missing.map(v => ({ [v.port.path]: v.port }))) as Record<string, IPort>
 
-        let imported = await getImportedProjects(project)
-        let imports = await getAllImports([project, ...imported], wantedResources)
+        /** Imports already cloned */
+        let imported = await getClonedImports(project)
 
-        for (let port of Object.values(ports)) {
-            console.log(`Preparing to install: ${"\n"}  ${port.name} : ${port.path}${"\n"}`)
+        for (let port of Object.values(ports)) {  // For all needed ports, clone them
+            console.log(LOCAL.install_preparingInstall(port.name, port.path))
+
             let folder = path.join(portsFolder, port.name)
             await executeCommand(`git clone "${port.path}" "${folder}"`, portsFolder)
+
+            /** The newly cloned project */
             let importedProject = await getProject(folder)
+
+            // Prepare it
             await runPrepare(importedProject, project)
+
             if (state.debug == true) console.log("Wanted resources:", wantedResources)
+            /** All imports in the entire project, needed to create new links */
             let imports = await getAllImports([project, importedProject, ...imported], wantedResources)
             if (state.debug == true) console.log("Wanted resources:", wantedResources)
+
+            // Create new links
             await createResourceLinks(project, new Set(Object.keys(imports)), importedProject, createdLinks)
+
             console.log("")
         }
 
+        // Refresh missing resources
         missing = await getMissingResources(project, wantedResources)
 
-        if (missing.length > 0) {
+        if (missing.length > 0) { // If any missing
+            /** Missing resources that were not missing previously */
             let newMissing = new Set<string>(missing.map(v => v.id))
+            // Remove all new missing resources from last missing resources
             lastMissing.forEach(v => newMissing.delete(v))
-            if (newMissing.size == 0) {
-                console.error("Failed to resolve following dependencies: ", lastMissing)
+            if (lastMissing.size == 0) { // If there are any left even after we cloned all the ports, there is nothing we can do, so quit
+                console.error(LOCAL.install_failedToResolve(lastMissing))
                 process.exit(1)
             }
         }
 
+        // Update the last missing resources
         lastMissing = new Set<string>(missing.map(v => v.id))
     }
 
-    console.log("\n", `Done! Took ${performance.now() - startTime} ms`)
-    await flushCreatedLinks(project, createdLinks)
+    console.log(LOCAL.install_done(performance.now() - startTime))
+    await writeGitignore(project, createdLinks)
     process.exit(0)
 }
 
 export async function getMissingResources(project: IProject, wantedResources: WantedResources) {
-    let importedProjects = await getImportedProjects(project)
+    let importedProjects = await getClonedImports(project)
 
     let exports = getAllExports(importedProjects)
     let imports = getAllImports([project, ...importedProjects], wantedResources)
@@ -108,53 +141,69 @@ export async function getMissingResources(project: IProject, wantedResources: Wa
     return missing
 }
 
+/**
+ * @param project The root project
+ * @param imports All imported resources
+ * @param portProject The project to create the links from
+ * @param createdLinks Set to save all created links
+ */
 export async function createResourceLinks(project: IProject, imports: Set<string>, portProject: IProject, createdLinks: Set<string>) {
-    let exports = Object.values(getExports(portProject))
+    /** Exports of the project we are creating links from */
+    const exports = Object.values(getExports(portProject))
 
     if (state.debug == true) {
         console.log(`Creating links for ${portProject.name}, imports:`, imports, "exports: ", exports.map(v => v.id))
     }
 
-    let linksToCreate = exports.filter(dependency => imports.has(dependency.id)).map(dependency => {
-        let name = dependency.resource.name
-        let link = path.join(project.path, name)
-        let target = path.join(portProject.path, name)
+    /** Links we need to create */
+    const linksToCreate = exports // Take all exports
+        .filter(dependency => imports.has(dependency.id)) // Keep only the ones needed
+        .map(dependency => {
+            const name = dependency.resource.name
+            const link = path.join(project.path, name)
+            const target = path.join(portProject.path, name)
 
-        return {
-            name,
-            link,
-            target
-        }
-    })
+            return {
+                name,
+                link,
+                target
+            }
+        })
 
-    await Promise.all(linksToCreate.map(async ({ link, target }) => {
+    await Promise.all(linksToCreate.map(async ({ link, target }) => { // Create the links
         await promisify(symlink)(target, link, "junction").catch((err: NodeJS.ErrnoException) => {
             if (err.code == "EEXIST") {
-                return
+                // If the link exists already no need to do anything
             } else {
-                console.log("[ERR]", err.stack)
+                throw err
             }
         })
         console.log(`Linked ${link} → ${target}`)
     }))
 
-
+    // Save the created links
     linksToCreate.map(v => v.name).forEach(v => createdLinks.add(v))
 }
 
-export async function flushCreatedLinks(project: IProject, createdLinks: Set<string>) {
-    let ignoreFiles = [
+export async function writeGitignore(project: IProject, createdLinks: Set<string>) {
+    const ignoreFiles = [
         GITIGNORE_SECTION_BEGIN,
         PORT_FOLDER_NAME,
         ...createdLinks
     ]
 
-    let gitignorePath = path.join(project.path, ".gitignore")
+    const gitignorePath = path.join(project.path, ".gitignore")
 
-    let gitignoreText = (await promisify(readFile)(gitignorePath).catch(err => { if (err.code == "ENOENT") return ""; else throw err })).toString()
-    let ourTextStart = gitignoreText.indexOf(GITIGNORE_SECTION_BEGIN) - 1
-    let gitignorePre = ourTextStart == -2 ? gitignoreText : gitignoreText.slice(0, ourTextStart)
-    let gitignoreOutput = gitignorePre + "\n" + ignoreFiles.join("\n") + "\n"
-
+    /** Text of the current gitignore */
+    const gitignoreText = (await promisify(readFile)(gitignorePath).catch(err => { if (err.code == "ENOENT") return ""; else throw err })).toString()
+    /** Index of the start of our generated text */
+    //                                                                  ↓ Subtract one to include the newline we put before our text 
+    const ourTextStart = gitignoreText.indexOf(GITIGNORE_SECTION_BEGIN) - 1
+    /** Text of the gitignore we didn't generate (user set), save it to put it in the new gitignore */
+    //                   ↓ Test if we even found our text, because if not we don't need to slice it out
+    const gitignorePre = ourTextStart == -2 ? gitignoreText : gitignoreText.slice(0, ourTextStart)
+    /** New gitignore text */
+    const gitignoreOutput = gitignorePre + "\n" + ignoreFiles.join("\n") + "\n"
+    // Write the new text to the gitignore
     await promisify(writeFile)(gitignorePath, gitignoreOutput)
 }

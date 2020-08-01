@@ -4,6 +4,8 @@ UCPeM is used to import packages into projects. A package is defined in using a 
 ## Config
 A project contains an `ucpem_config` file, defining default imports, resources and their dependencies. 
 
+Lines starting with `#` are comments, and are ignored by the parser.
+
 To specify default imports write:
 ```xml
 "default" 
@@ -12,7 +14,7 @@ To specify default imports write:
     "end")...
 "end"
 ```
-Port is a path for `git clone`. Resource names must be `[a-zA-Z0-9_]+`.
+Port is a repository path (for `git clone`). Resource names should be `[a-zA-Z0-9_]+` and cannot contain whitespace.
 
 Port must be a git clone URL. Imported resources are placed relative to the config file of the project in a `${resourceName}` folder. All cloned repos will be placed into a `ucpem_ports~` folder in the root of the project. Don't worry about source control, a `.gitignore` file will be generated automatically.
 
@@ -33,7 +35,7 @@ To define a resource with dependencies write:
 Ports can have a preparation script. It's run when the port is cloned, updated or manually using `ucpem prepare`. 
 ```xml
 "prepare" ["using" <type>]
-<command>...
+    <command>...
 "end"
 ``` 
 Prepare runners are:
@@ -47,11 +49,11 @@ Prepare scripts get the following values:
  - `PROJECT_PATH` → The name of the project
  - `PROJECT_NAME` → The path to the project
 > In shell type runner the values are in environment variables prefixed with `UCPEM_`
-
-Lines starting with `#` are comments.
 ## Installation
 ```
 git clone https://github.com/bt7s7k7/UCPeM.git
+npm install
+npm run build
 npm link
 ```
 ## Usage
@@ -62,8 +64,8 @@ Usage:
 Operations:
   install - Downloads and prepares all ports
   update  - Updates all ports
-  prepare - Runs the prepare script for this package
-  info    - Prints imports and config files of the current project
-  link    - Recreates links for imported resources
+  prepare - Runs all prepare scripts in this project
+  info    - Prints information about this project
+  link    - Recreates all links to imports
 ```
-Run ucpem without arguments to view help.
+Run `ucpem` without arguments to view help.

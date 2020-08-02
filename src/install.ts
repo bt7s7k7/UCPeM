@@ -1,6 +1,6 @@
 import { mkdir, readFile, symlink, writeFile } from "fs"
 import { performance } from "perf_hooks"
-import { promisify } from "util"
+import { inspect, promisify } from "util"
 import { GITIGNORE_SECTION_BEGIN, LOCAL, PORT_FOLDER_NAME, state } from "./global"
 import { getAllExports, getAllImports as getAllImports, getClonedImports, getExports, getProject, IDependency, IPort, IProject, makeAllExportsWanted, runPrepare, WantedResources } from "./project"
 import { executeCommand } from "./runner"
@@ -79,13 +79,14 @@ export async function install(folder: string, forceUpdate = false) {
         let imported = await getClonedImports(project)
 
         for (let port of Object.values(ports)) {  // For all needed ports, clone them
+            if (port.path == folder) throw new Error(`Tried to clone self, missing: ${inspect(missing, { colors: true })}`)
             console.log(LOCAL.install_preparingInstall(port.name, port.path))
 
-            let folder = path.join(portsFolder, port.name)
-            await executeCommand(`git clone "${port.path}" "${folder}"`, portsFolder)
+            let clonePath = path.join(portsFolder, port.name)
+            await executeCommand(`git clone "${port.path}" "${clonePath}"`, portsFolder)
 
             /** The newly cloned project */
-            let importedProject = await getProject(folder)
+            let importedProject = await getProject(clonePath)
 
             // Prepare it
             await runPrepare(importedProject, project)
@@ -127,7 +128,7 @@ export async function install(folder: string, forceUpdate = false) {
 export async function getMissingResources(project: IProject, wantedResources: WantedResources) {
     let importedProjects = await getClonedImports(project)
 
-    let exports = getAllExports(importedProjects)
+    let exports = getAllExports([...importedProjects, project])
     let imports = getAllImports([project, ...importedProjects], wantedResources)
 
     let missing = [] as IDependency[]

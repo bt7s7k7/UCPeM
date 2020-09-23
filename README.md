@@ -50,11 +50,16 @@ Prepare scripts get the following values:
  - `PROJECT_NAME` → The path to the project
 > In shell type runner the values are in environment variables prefixed with `UCPEM_`
 ## Installation
+1. Install globally
 ```
 git clone https://github.com/bt7s7k7/UCPeM.git
 npm install
 npm run build
 npm link
+```
+2. Run once
+```html
+curl -L https://github.com/bt7s7k7/UCPeM/releases/latest/download/index.js | node - <arguments>
 ```
 ## Usage
 ```

@@ -173,12 +173,12 @@ export async function getProject(folder: string) {
     /** Text in the config file */
     let configText = ""
     /** The folder we started searching in */
-    const initFolder = path.resolve(process.cwd(), folder)
+    const initFolder = path.resolve(folder)
 
     /** Try to find a config file at the current path */
     const tryRead = async () => {
         try {
-            configText = (await promisify(readFile)(path.join(path.resolve(process.cwd(), folder), CONFIG_FILE_NAME))).toString()
+            configText = (await promisify(readFile)(path.join(folder, CONFIG_FILE_NAME))).toString()
         } catch (err) {
             if ((err as NodeJS.ErrnoException).code != "ENOENT") {
                 throw err
@@ -192,7 +192,7 @@ export async function getProject(folder: string) {
 
     /** Check if the folder exists */
     const tryFolder = async (name: string) => {
-        let stats = await promisify(stat)(path.resolve(process.cwd(), folder, name)).catch(() => { })
+        let stats = await promisify(stat)(path.join(folder, name)).catch(() => { })
         if (stats) return stats.isDirectory()
         else return false
     }
@@ -226,14 +226,14 @@ export async function getProject(folder: string) {
         }
     }
 
-    const absolutePath = path.resolve(process.cwd(), folder)
+    const absolutePath = path.resolve(folder)
 
     if (config == null) config = parseConfigFile(configText, absolutePath, initFolder)
 
     return {
         ...config,
         path: absolutePath,
-        name: basename(path.resolve(process.cwd(), initFolder))
+        name: basename(path.resolve(initFolder))
     } as IProject
 }
 

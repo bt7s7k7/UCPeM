@@ -67,7 +67,7 @@ export async function install(folder: string, forceUpdate = false) {
     /** Missing resources last cycle */
     let lastMissing = new Set<string>(missing.map(v => v.id))
     /** Path to folder with imports */
-    let portsFolder = path.join(project.path, PORT_FOLDER_NAME)
+    let portsFolder = path.join(project.basePath, PORT_FOLDER_NAME)
     /** Create the import folder, incase it doesn't exist */
     await promisify(mkdir)(portsFolder).catch(v => v)
 

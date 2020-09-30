@@ -49,6 +49,11 @@ Prepare scripts get the following values:
  - `PROJECT_PATH` → The name of the project
  - `PROJECT_NAME` → The path to the project
 > In shell type runner the values are in environment variables prefixed with `UCPEM_`
+
+If your project files are offset from the config folder (i.e. in a `src` folder) you can prefix the project path
+```xml
+"prefix" <path>
+```
 ## Installation
 1. Install globally
 ```

@@ -28,6 +28,7 @@ export interface IDependency {
 export interface IProject extends IPort {
     prepare: string[]
     prepareType: PrepareType
+    basePath: string
 }
 
 export const PREPARE_TYPES = ["shell", "node"] as const
@@ -52,6 +53,8 @@ export function parseConfigFile(content: string, folder: string, initFolder: str
     let resource = null as IResource | null
     /** Current import in a resource being defined */
     let resourceImport = null as IPort | null
+
+    let prefixedFolder = folder
 
     for (let i = 0, len = lines.length; i < len; i++) { // For every line
 
@@ -114,6 +117,10 @@ export function parseConfigFile(content: string, folder: string, initFolder: str
                 } else {
                     throw new UserError(LOCAL.config_raw_argErr(getPos()))
                 }
+            } else if (words[0] == "prefix") { // Parse folder prefix
+                const prefix = words.slice(1).join(" ")
+
+                prefixedFolder = path.join(prefixedFolder, prefix)
             } else throw new UserError(LOCAL.config_invalidKeyword(getPos()))
         } else if (state == "prepare") {
             if (line == "end") { // If end then end
@@ -164,7 +171,8 @@ export function parseConfigFile(content: string, folder: string, initFolder: str
     return {
         prepare,
         prepareType,
-        resources
+        resources,
+        path: prefixedFolder
     } as IProject
 }
 
@@ -219,6 +227,7 @@ export async function getProject(folder: string) {
                     resources: Object.assign({}, ...directories.map(v => ({ [v]: { name: v, imports: {} } }))),
                     prepare: [],
                     path: folder,
+                    basePath: folder,
                     name: path.basename(folder),
                     prepareType: "node"
                 }
@@ -232,13 +241,13 @@ export async function getProject(folder: string) {
 
     return {
         ...config,
-        path: absolutePath,
+        basePath: absolutePath,
         name: basename(path.resolve(initFolder))
     } as IProject
 }
 
 export async function getClonedImports(project: IProject) {
-    const portsFolder = path.join(project.path, PORT_FOLDER_NAME)
+    const portsFolder = path.join(project.basePath, PORT_FOLDER_NAME)
     /** All files found in the portsFolder */
     const files = await promisify(readdir)(portsFolder).catch(v => [] as string[])
 

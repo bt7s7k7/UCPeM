@@ -3,10 +3,14 @@
         "incremental": true,
         "target": "es6",
         "sourceMap": true,
-        "declaration": true,
         "strict": true,
-        "lib": [ "es6" ],
+        "lib": [
+            "es6"
+        ],
         "module": "CommonJS",
         "outDir": "build"
-    }
+    },
+    "include": [
+        "src"
+    ]
 }

@@ -6,7 +6,8 @@
     "scripts": {
         "build": "tsc --incremental",
         "watch": "tsc --watch",
-        "test": "npm run build && npm link --force && node build/test.js"
+        "test": "npm run build && npm link --force && node build/test.js",
+        "buildConfigTypedef": "node build/configTypedefBuilder.js"
     },
     "files": [
         "build/**/*",

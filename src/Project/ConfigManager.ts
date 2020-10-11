@@ -58,12 +58,14 @@ export const ConfigManager = new class ConfigManager {
             prepare(func) {
                 return {
                     callback(builder: ResourceBuilder) {
+                        builder.setPrepare(func)
                     }
                 }
             },
-            private() {
+            internal() {
                 return {
                     callback(builder: ResourceBuilder) {
+                        builder.setInternal()
                     }
                 }
             },
@@ -101,10 +103,13 @@ export const ConfigManager = new class ConfigManager {
             eval(script)(api)
         } catch (err) {
             if ("stack" in err) {
-                err.stack = (err.stack as string)
+                const prefix = `[${chalk.redBright("ERR")}] Error during running config script for "${projectBuilder.name}" :: ${path}` + "\n"
+                err.stack = prefix + (err.stack as string)
                     .replace(/<anonymous>:/g, path + ":")
                     .replace(/eval at .*, /g, "")
                     .replace(/at eval \(eval at parseConfig.*\n/g, (s) => chalk.cyanBright(s))
+
+                err.message = prefix + err.message
             }
             throw err
         }

@@ -4,6 +4,7 @@ import { Resource } from "./Resource"
 export class ResourceBuilder {
     protected dependencies = new Set<string>()
     protected prepare = null as (() => void) | null
+    protected internal = false
 
     public addDependency(id: string) {
         if (this.dependencies.has(id)) throw new RangeError(`Duplicate import of dependency "${id}"`)
@@ -11,11 +12,21 @@ export class ResourceBuilder {
     }
 
     public build() {
-        return new Resource(this.id, this.path, [...this.dependencies], this.prepare)
+        return new Resource(this.id, this.path, [...this.dependencies], this.prepare, this.internal)
     }
 
     public setPath(newPath: string) {
         this.path = join(dirname(this.path), newPath)
+    }
+
+    public setInternal() {
+        if (!this.internal) this.internal = true
+        else throw new Error("Duplicate private declaration")
+    }
+
+    public setPrepare(func: () => void) {
+        if (this.prepare) throw new Error("Duplicate prepare script definition")
+        else this.prepare = func
     }
 
     constructor(public readonly id: string, protected path: string) { }

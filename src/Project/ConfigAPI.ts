@@ -32,7 +32,7 @@ namespace ConfigAPI {
         /** Sets a path for a resource, relative to prefix, must include resource folder (i.e. "./src/Button" not "./src/" ← use `project.prefix()` for that) */
         path(path: string): Modifier
         /** Sets a resource to be not exported */
-        private(): Modifier
+        internal(): Modifier
         /** Function to be called before linking dependencies */
         prepare(callback: () => void): Modifier
 

@@ -36,6 +36,12 @@ export function includes(text: string, substr: string) {
     }
 }
 
+export function notIncludes(text: string, substr: string) {
+    if (text.includes(substr)) {
+        fail(`Text does include "${substr}"`)
+    }
+}
+
 export interface DirectoryStructure extends Record<string, DirectoryStructure | string | typeof git> { }
 
 export interface TestCase {

@@ -1,4 +1,4 @@
-import { includes, run, TestCase } from "./testAPI";
+import { includes, notIncludes, run, TestCase } from "./testAPI";
 
 export const cases: Record<string, TestCase> = {
     "Should return resource name": {
@@ -32,6 +32,46 @@ export const cases: Record<string, TestCase> = {
             includes(info, "resource")
         },
         shouldFail: "error code 1"
+    },
+    "Should indicate that a resource is internal": {
+        structure: {
+            "ucpem.js": `
+                const { project, internal } = require("ucpem")
+
+                project.res("resource",
+                    internal()
+                )
+            `,
+            "resource": {}
+        },
+        async callback() {
+            let info = await run(`ucpem info`)
+
+            includes(info, ".temp!resource !!INT")
+        }
+    },
+    "Should not indicate that a resource is internal, if not internal": {
+        structure: {
+            "ucpem.js": `
+                const { project, internal } = require("ucpem")
+
+                project.res("resource",
+                    internal()
+                )
+
+                project.res("resource2",
+                    // Not internal
+                )
+            `,
+            "resource": {},
+            "resource2": {}
+        },
+        async callback() {
+            let info = await run(`ucpem info`)
+
+            includes(info, ".temp!resource !!INT")
+            notIncludes(info, ".temp!resource2 !!INT")
+        }
     }
 
 }

@@ -2,16 +2,29 @@
 import { join } from "path"
 import { inspect } from "util"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
+import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
 const commands = {
-    info: {
+    _devinfo: {
         desc: "Displays information about the current project",
         async callback() {
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
 
             console.log(inspect(project, true, 50, true))
+        }
+    },
+    info: {
+        desc: "Displays information about the current project",
+        async callback() {
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+
+            DependencyTracker.logPorts()
+            console.log()
+            project.logTree()
+
+            //console.log(inspect(project, true, 50, true))
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

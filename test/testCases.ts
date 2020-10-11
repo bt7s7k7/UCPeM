@@ -72,6 +72,26 @@ export const cases: Record<string, TestCase> = {
             includes(info, ".temp!resource !!INT")
             notIncludes(info, ".temp!resource2 !!INT")
         }
+    },
+    "Should print the name of the missing port and resource": {
+        structure: {
+            "ucpem.js": `
+                const { project, github } = require("ucpem")
+
+                const port = github("b/port")
+
+                project.res("resource",
+                    port.res("depend")
+                )
+            `,
+            "resource": {}
+        },
+        async callback() {
+            let info = await run(`ucpem info`)
+
+            includes(info, "  port :: ")
+            includes(info, "  port!depend")
+        }
     }
 
 }

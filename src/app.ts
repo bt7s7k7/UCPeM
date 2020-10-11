@@ -20,9 +20,9 @@ const commands = {
         async callback() {
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
 
-            DependencyTracker.logPorts()
-            console.log()
             project.logTree()
+            DependencyTracker.logPorts()
+            DependencyTracker.logMissing()
 
             //console.log(inspect(project, true, 50, true))
         }

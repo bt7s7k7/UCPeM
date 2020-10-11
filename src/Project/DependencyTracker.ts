@@ -1,9 +1,13 @@
+import { Project } from "./Project"
 import { Resource } from "./Resource"
 import { parseNameFromPath } from "./util"
 
 export const DependencyTracker = new class DependencyTracker {
     protected portIndex = {} as Record<string, string>
+    protected projectIndex = {} as Record<string, Project>
     protected resourceIndex = {} as Record<string, Resource>
+    protected unresolvedDependencies = new Set<string>()
+    protected unresolvedPorts = new Set<string>()
 
     public addPort(source: string) {
         const name = parseNameFromPath(source)
@@ -14,6 +18,8 @@ export const DependencyTracker = new class DependencyTracker {
 
         this.portIndex[name] = source
 
+        if (!(name in this.projectIndex)) this.unresolvedPorts.add(name)
+
         return name
     }
 
@@ -23,7 +29,13 @@ export const DependencyTracker = new class DependencyTracker {
 
     public addResource(resource: Resource) {
         if (resource.id in this.resourceIndex) throw new RangeError(`Duplicate registration of resource "${resource.id}"`)
-        else this.resourceIndex[resource.id] = resource
+
+        this.resourceIndex[resource.id] = resource
+        resource.dependencies.forEach(v => !(v in this.resourceIndex) && this.unresolvedDependencies.add(v))
+
+        if (this.unresolvedDependencies.has(resource.id)) {
+            this.unresolvedDependencies.delete(resource.id)
+        }
     }
 
     public resolveResource(id: string) {
@@ -31,6 +43,30 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public logPorts() {
-        Object.entries(this.portIndex).forEach(([key, value]) => console.log(`${key}: ${value}`))
+        const ports = Object.entries(this.portIndex)
+        if (ports.length > 0) {
+            console.log("Referenced ports: ")
+            ports.forEach(([key, value]) => console.log(`  ${key}: ${value}`))
+            console.log()
+        }
+    }
+
+    public logMissing() {
+        if (this.unresolvedPorts.size > 0) {
+            console.log("Missing ports")
+            this.unresolvedPorts.forEach(v => console.log(`  ${v} :: ${this.portIndex[v]}`))
+        }
+
+        if (this.unresolvedDependencies.size > 0) {
+            console.log("Missing resources")
+            this.unresolvedDependencies.forEach(v => console.log(`  ${v}`))
+        }
+    }
+
+    public addProject(project: Project) {
+        if (project.name in this.projectIndex) throw new RangeError(`Duplicate registration of project "${project.name}"`)
+
+        this.projectIndex[project.name] = project
+        if (this.unresolvedPorts.has(project.name)) this.unresolvedPorts.delete(project.name)
     }
 }()

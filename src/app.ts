@@ -1,7 +1,10 @@
 #!/usr/bin/env node
+import chalk from "chalk"
+import { createHash } from "crypto"
 import { join } from "path"
 import { inspect } from "util"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
+import { install } from "./Install/install"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
@@ -11,6 +14,7 @@ const commands = {
         desc: "Displays information about the current project",
         async callback() {
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            project.loadAllPorts()
 
             console.log(inspect(project, true, 50, true))
         }
@@ -19,12 +23,19 @@ const commands = {
         desc: "Displays information about the current project",
         async callback() {
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            project.loadAllPorts()
 
             project.logTree()
             DependencyTracker.logPorts()
             DependencyTracker.logMissing()
 
             //console.log(inspect(project, true, 50, true))
+        }
+    },
+    install: {
+        desc: "Installs all missing ports",
+        async callback() {
+            await install()
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>
@@ -47,11 +58,12 @@ if (args.length == 0 || !(args[0] in commands)) {
     // Call the callback of the specified command and handle errors
     commands[args[0]].callback().catch(err => {
         if (err instanceof UserError) {
-            console.error(`[ERR] ${err.message}`)
-            process.exit(1)
+            err.message[0] != "^" && console.error(`[${chalk.redBright("ERR")}] ${err.message}`)
         } else {
             console.error(err)
-            process.exit(1)
         }
+        const hash = createHash("md5")
+        hash.update(err.message)
+        process.exit(parseInt(hash.digest("hex"), 16) % 255)
     })
 }

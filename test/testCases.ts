@@ -1,4 +1,4 @@
-import { includes, notIncludes, run, TestCase } from "./testAPI";
+import { git, includes, notIncludes, run, TestCase } from "./testAPI";
 
 export const cases: Record<string, TestCase> = {
     "Should return resource name": {
@@ -31,7 +31,7 @@ export const cases: Record<string, TestCase> = {
 
             includes(info, "resource")
         },
-        shouldFail: "error code 1"
+        shouldFail: "error code 134"
     },
     "Should indicate that a resource is internal": {
         structure: {
@@ -92,6 +92,89 @@ export const cases: Record<string, TestCase> = {
             includes(info, "  port :: ")
             includes(info, "  port!depend")
         }
-    }
+    },
+    "Should say no missing dependencies if no missing": {
+        structure: {
+            "ucpem.js": `
+                const { project } = require("ucpem")
+
+                project.res("resource")
+            `,
+            "resource": {
+                "index.js": `console.log("Hi")`
+            }
+        },
+        async callback() {
+            let info = await run("ucpem install")
+
+            includes(info, "No missing dependencies")
+        }
+    },
+    "Should install the missing port": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`ucpem install`, "./project")
+        }
+    },
+    "Should error on missing resource after install": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency"),
+                        port.res("dependency2")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`ucpem install`, "./project")
+        },
+        shouldFail: "error code 177"
+    },
 
 }

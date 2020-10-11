@@ -69,4 +69,15 @@ export const DependencyTracker = new class DependencyTracker {
         this.projectIndex[project.name] = project
         if (this.unresolvedPorts.has(project.name)) this.unresolvedPorts.delete(project.name)
     }
+
+    public reset() {
+        Object.assign(this, new DependencyTracker())
+    }
+
+    public getMissingPorts() {
+        return [...this.unresolvedPorts].map(v => ({ name: v, path: this.portIndex[v] }))
+    }
+    public getMissingDependencies() {
+        return [...this.unresolvedDependencies]
+    }
 }()

@@ -50,6 +50,7 @@ export const ConfigManager = new class ConfigManager {
             path(path) {
                 return {
                     callback(builder: ResourceBuilder) {
+                        builder.setPath(path)
                     }
                 }
             },
@@ -75,7 +76,7 @@ export const ConfigManager = new class ConfigManager {
                 },
                 res(name, ...mods) {
                     const id = makeResourceID(projectBuilder.name, name)
-                    const resourceBuilder = new ResourceBuilder(id)
+                    const resourceBuilder = new ResourceBuilder(id, join(this.path, name))
 
                     for (const mod of mods) {
                         if ("id" in mod) {

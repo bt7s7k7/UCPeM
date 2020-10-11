@@ -1,3 +1,4 @@
+import { dirname, join } from "path"
 import { Resource } from "./Resource"
 
 export class ResourceBuilder {
@@ -10,8 +11,12 @@ export class ResourceBuilder {
     }
 
     public build() {
-        return new Resource(this.id, [...this.dependencies], this.prepare)
+        return new Resource(this.id, this.path, [...this.dependencies], this.prepare)
     }
 
-    constructor(public readonly id: string) { }
+    public setPath(newPath: string) {
+        this.path = join(dirname(this.path), newPath)
+    }
+
+    constructor(public readonly id: string, protected path: string) { }
 }

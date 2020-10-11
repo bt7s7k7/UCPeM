@@ -6,7 +6,7 @@
     "scripts": {
         "build": "tsc --incremental",
         "watch": "tsc --watch",
-        "test-dev": "ts-node-dev --respawn ./test/test.ts",
+        "test-dev": "ts-node-dev --cls --watch ./src --respawn ./test/test.ts",
         "test": "npm run build && npm link --force && ts-node ./test/test.ts",
         "buildConfigTypedef": "node build/configTypedefBuilder.js"
     },

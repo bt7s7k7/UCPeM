@@ -1,3 +1,4 @@
+import chalk from "chalk"
 import { dirname, join } from "path"
 import { executeCommand } from "../runner"
 import { DependencyTracker } from "./DependencyTracker"
@@ -100,9 +101,10 @@ export const ConfigManager = new class ConfigManager {
             eval(script)(api)
         } catch (err) {
             if ("stack" in err) {
-                err.stack = err.stack
+                err.stack = (err.stack as string)
                     .replace(/<anonymous>:/g, path + ":")
                     .replace(/eval at .*, /g, "")
+                    .replace(/at eval \(eval at parseConfig.*\n/g, (s) => chalk.cyanBright(s))
             }
             throw err
         }

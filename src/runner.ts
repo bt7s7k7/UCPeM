@@ -1,3 +1,4 @@
+import chalk from "chalk"
 import { spawn, SpawnOptions } from "child_process"
 
 export class RunnerError extends Error { }
@@ -5,18 +6,18 @@ export class RunnerError extends Error { }
 export function executeCommand(command: string, cwd: string, options: SpawnOptions = {}) {
     return new Promise<string>((resolve, reject) => {
         // Write the command to be executed
-        process.stdout.write(`> ${cwd} $ ${command}\n\n  `)
+        options.stdio != "ignore" && process.stdout.write(chalk.grey(`> ${cwd} $ ${command}\n\n  `))
 
         // Spawn the process
         const childProcess = spawn(command, [], {
-            ...options,
             cwd,
             shell: true,
             stdio: "pipe",
             env: {
                 ...process.env,
                 FORCE_COLOR: "true"
-            }
+            },
+            ...options
         })
 
         /** Chunks of the output from the command */
@@ -33,10 +34,10 @@ export function executeCommand(command: string, cwd: string, options: SpawnOptio
         })
 
         // Pipe all streams we don't need to process
-        childProcess.stderr.pipe(process.stderr)
-        process.stdin.pipe(childProcess.stdin)
+        childProcess.stderr?.pipe(process.stderr)
+        childProcess.stdin && process.stdin.pipe(childProcess.stdin)
 
-        childProcess.stdout.on("data", (chunk: Buffer) => {
+        childProcess.stdout?.on("data", (chunk: Buffer) => {
             // Save all output from the command
             ret.push(chunk)
             // Also print it out, but indent so we know it's coming from it

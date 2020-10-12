@@ -16,12 +16,15 @@ export async function install() {
         const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
         const portFolderPath = project.portFolderPath
 
-        project.loadAllPorts(true)
+        await project.loadAllPorts(true)
 
         const missingPorts = DependencyTracker.getMissingPorts()
         if (missingPorts.length > 0) {
             for (const { name, path } of missingPorts) {
-                await executeCommand(`git clone "${path}" "${join(portFolderPath, name)}"`, project.path)
+                const clonePath = join(portFolderPath, name);
+                await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
+                Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
+                await DependencyTracker.runPrepares(name)
             }
             await iter()
         } else {

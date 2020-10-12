@@ -34,14 +34,14 @@ namespace ConfigAPI {
         /** Sets a resource to be not exported */
         internal(): Modifier
         /** Function to be called before linking dependencies */
-        prepare(callback: () => void): Modifier
+        prepare(callback: () => Promise<void>): Modifier
 
         /** Creates a symlink / junction, relative to resource. Only available during callbacks */
         link(link: string, target: string): void
         /** Joins paths together */
         join(...paths: string[]): string
         /** Runs a command, cwd is resource path. Only available during callbacks */
-        run(command: string): void
+        run(command: string): Promise<void>
         constants: {
             /** Path of the resource the callback is executed for */
             readonly resourcePath: string

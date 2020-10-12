@@ -1,4 +1,5 @@
 import chalk from "chalk"
+import { symlinkSync } from "fs"
 import { dirname, join } from "path"
 import { executeCommand } from "../runner"
 import { DependencyTracker } from "./DependencyTracker"
@@ -45,8 +46,19 @@ export const ConfigManager = new class ConfigManager {
             join(...paths) {
                 return join(...paths)
             },
-            link(link, target) {
-
+            link(source, target) {
+                console.log(`Linking ${source} → ${target}`)
+                try {
+                    const fullSourcePath = join(constants.resourcePath, source)
+                    const fullTargetPath = join(constants.resourcePath, target)
+                    symlinkSync(fullSourcePath, fullTargetPath, "junction")
+                } catch (err) {
+                    if (err.code == "EEXIST") {
+                        console.log("File already exists")
+                    } else {
+                        throw err
+                    }
+                }
             },
             path(path) {
                 return {
@@ -69,8 +81,8 @@ export const ConfigManager = new class ConfigManager {
                     }
                 }
             },
-            run(command: string) {
-                executeCommand(command, dirPath)
+            async run(command: string) {
+                await executeCommand(command, dirPath)
             },
             project: {
                 path: dirPath,
@@ -79,7 +91,7 @@ export const ConfigManager = new class ConfigManager {
                 },
                 res(name, ...mods) {
                     const id = makeResourceID(projectBuilder.name, name)
-                    const resourceBuilder = new ResourceBuilder(id, join(this.path, name))
+                    const resourceBuilder = new ResourceBuilder(id, join(this.path, name), constants)
 
                     for (const mod of mods) {
                         if ("id" in mod) {

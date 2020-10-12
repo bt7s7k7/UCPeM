@@ -1,9 +1,10 @@
 import { dirname, join } from "path"
+import { PrepareScript } from "./PrepareScript"
 import { Resource } from "./Resource"
 
 export class ResourceBuilder {
     protected dependencies = new Set<string>()
-    protected prepare = null as (() => void) | null
+    protected prepare = null as PrepareScript | null
     protected internal = false
 
     public addDependency(id: string) {
@@ -24,10 +25,14 @@ export class ResourceBuilder {
         else throw new Error("E058 Duplicate private declaration")
     }
 
-    public setPrepare(func: () => void) {
+    public setPrepare(func: PrepareScript["callback"]) {
         if (this.prepare) throw new Error("E057 Duplicate prepare script definition")
-        else this.prepare = func
+        else this.prepare = new PrepareScript(func, this.constants)
     }
 
-    constructor(public readonly id: string, protected path: string) { }
+    constructor(
+        public readonly id: string,
+        protected path: string,
+        protected constants: ConfigAPI.API["constants"]
+    ) { }
 }

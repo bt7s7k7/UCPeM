@@ -16,7 +16,7 @@ export class Project {
         })
     }
 
-    public loadAllPorts(createPortsFolder = false) {
+    public async loadAllPorts(createPortsFolder = false) {
         try {
             const installedPorts = readdirSync(this.portFolderPath)
 
@@ -31,6 +31,7 @@ export class Project {
                 if (createPortsFolder) {
                     console.log("Ports folder doesn't exist, creating...")
                     mkdirSync(this.portFolderPath)
+                    await DependencyTracker.runPrepares(this.name)
                 }
             } else throw err
         }

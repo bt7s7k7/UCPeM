@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import { statSync } from "fs";
 import { DependencyTracker } from "./DependencyTracker";
+import { PrepareScript } from "./PrepareScript";
+import { Project } from "./Project";
 
 export class Resource {
 
@@ -18,11 +20,15 @@ export class Resource {
         })
     }
 
+    public async runPrepare(rootProject: Project, project: Project) {
+        await this.prepare?.run(rootProject, project, this)
+    }
+
     constructor(
         public readonly id: string,
         public readonly path: string,
         public readonly dependencies: Readonly<string[]>,
-        public readonly prepare: (() => void) | null,
+        public readonly prepare: PrepareScript | null,
         public readonly internal: boolean,
     ) {
         try {

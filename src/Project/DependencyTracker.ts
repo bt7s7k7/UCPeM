@@ -9,6 +9,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected unresolvedDependencies = new Set<string>()
     protected unresolvedPorts = new Set<string>()
     protected isInitProject = false
+    protected rootProject = null as Project | null
 
     public addPort(source: string) {
         const name = parseNameFromPath(source)
@@ -70,6 +71,7 @@ export const DependencyTracker = new class DependencyTracker {
         this.projectIndex[project.name] = project
         if (this.unresolvedPorts.has(project.name)) this.unresolvedPorts.delete(project.name)
 
+        this.isInitProject && (this.rootProject = project)
         this.isInitProject = false
     }
 
@@ -110,5 +112,15 @@ export const DependencyTracker = new class DependencyTracker {
 
     public setInitProject() {
         this.isInitProject = true
+    }
+
+    public async runPrepares(forPortName: string | null = null) {
+        if (!this.rootProject) throw new Error("E092 Trying to run prepare scripts but no root project registered")
+        const resources = Object.values(this.resourceIndex)
+        for (const resource of resources) {
+            const portName = parseResourceID(resource.id).portName
+            if (forPortName && portName != forPortName) continue
+            await resource.runPrepare(this.rootProject!, this.projectIndex[portName])
+        }
     }
 }()

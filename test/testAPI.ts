@@ -3,10 +3,15 @@ import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { executeCommand, RunnerError } from "../src/runner";
 
+let ucpemExec = "ucpem"
+if (process.argv.length > 2) ucpemExec = join(__dirname, "..", process.argv[2])
+
 export class TestFail extends Error { }
 
 export function run(command: string, cwd: string = "", options: SpawnOptions = {}) {
     cwd = join(__dirname, dir(), cwd)
+
+    command = command.replace(/^ucpem/, ucpemExec)
 
     return executeCommand(command, cwd, options).catch(err => {
         if (err instanceof RunnerError) {

@@ -1,38 +1,46 @@
 name: Release
 
-on: 
+on:
   release:
     types: [published]
-  
+
 jobs:
   release:
     name: Build And Release
     runs-on: ubuntu-latest
-     
+
     steps:
-    - uses: actions/checkout@v2
-      name: Checkout
-      with:
-       ref: ${{ github.event.release.tag_name }}
-    - uses: actions/setup-node@v1
-      name: Setup Node
-      with:
-        node-version: '12.x'
-    - run: npm install
-      name: Install npm packages
-    - run: npm i -g @vercel/ncc
-      name: Install ncc
-    - run: npm run build
-      name: Build
-    - run: ncc build build/app.js
-      name: Package the app
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: dist/index.js
-        asset_name: index.js
-        asset_content_type: text/javascript
+      - uses: actions/checkout@v2
+        name: Checkout
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v1
+        name: Setup Node
+        with:
+          node-version: "12.x"
+      - run: npm install
+        name: Install npm packages
+      - run: npm run test-release
+        name: Build, package and test
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/index.js
+          asset_name: ucpem.js
+          asset_content_type: text/javascript
+      - name: Download legacy release
+        run: curl -o dist/legacy.js -L https://github.com/bt7s7k7/UCPeM/releases/latest/download/index.js
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: dist/legacy.js
+          asset_name: index.js
+          asset_content_type: text/javascript

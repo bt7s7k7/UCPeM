@@ -1,6 +1,6 @@
 import { Project } from "./Project"
 import { Resource } from "./Resource"
-import { parseNameFromPath } from "./util"
+import { parseNameFromPath, parseResourceID } from "./util"
 
 export const DependencyTracker = new class DependencyTracker {
     protected portIndex = {} as Record<string, string>
@@ -8,6 +8,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected resourceIndex = {} as Record<string, Resource>
     protected unresolvedDependencies = new Set<string>()
     protected unresolvedPorts = new Set<string>()
+    protected isInitProject = false
 
     public addPort(source: string) {
         const name = parseNameFromPath(source)
@@ -30,11 +31,9 @@ export const DependencyTracker = new class DependencyTracker {
     public addResource(resource: Resource) {
         if (resource.id in this.resourceIndex) throw new RangeError(`E214 Duplicate registration of resource "${resource.id}"`)
 
-        this.resourceIndex[resource.id] = resource
-        resource.dependencies.forEach(v => !(v in this.resourceIndex) && this.unresolvedDependencies.add(v))
-
-        if (this.unresolvedDependencies.has(resource.id)) {
-            this.unresolvedDependencies.delete(resource.id)
+        if (this.unresolvedDependencies.delete(resource.id) || this.isInitProject) {
+            this.resourceIndex[resource.id] = resource
+            resource.dependencies.forEach(v => !(v in this.resourceIndex) && this.unresolvedDependencies.add(v))
         }
     }
 
@@ -43,6 +42,7 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public logPorts() {
+        this.filterPorts()
         const ports = Object.entries(this.portIndex)
         if (ports.length > 0) {
             console.log("Referenced ports: ")
@@ -52,9 +52,10 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public logMissing() {
-        if (this.unresolvedPorts.size > 0) {
+        const missingPorts = this.getMissingPorts()
+        if (missingPorts.length > 0) {
             console.log("Missing ports")
-            this.unresolvedPorts.forEach(v => console.log(`  ${v} :: ${this.portIndex[v]}`))
+            missingPorts.forEach(({ name }) => console.log(`  ${name} :: ${this.portIndex[name]}`))
         }
 
         if (this.unresolvedDependencies.size > 0) {
@@ -68,16 +69,46 @@ export const DependencyTracker = new class DependencyTracker {
 
         this.projectIndex[project.name] = project
         if (this.unresolvedPorts.has(project.name)) this.unresolvedPorts.delete(project.name)
+
+        this.isInitProject = false
     }
 
     public reset() {
         Object.assign(this, new DependencyTracker())
     }
 
+    public filterPorts() {
+        const referencedResources = [...this.unresolvedDependencies, ...Object.keys(this.resourceIndex)]
+        Object.keys(this.portIndex).forEach(port => {
+            let confirmed = false
+
+            for (const resourceId of referencedResources) {
+                const { portName } = parseResourceID(resourceId)
+                if (portName == port) {
+                    confirmed = true
+                    break
+                }
+            }
+
+            if (confirmed == false) {
+                delete this.portIndex[port]
+            }
+        })
+
+        this.unresolvedPorts = new Set([...this.unresolvedPorts].filter(port => port in this.portIndex))
+    }
+
     public getMissingPorts() {
+        this.filterPorts()
+
         return [...this.unresolvedPorts].map(v => ({ name: v, path: this.portIndex[v] }))
     }
+
     public getMissingDependencies() {
         return [...this.unresolvedDependencies]
+    }
+
+    public setInitProject() {
+        this.isInitProject = true
     }
 }()

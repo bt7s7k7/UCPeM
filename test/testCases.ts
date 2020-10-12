@@ -174,5 +174,62 @@ export const cases: Record<string, TestCase> = {
         },
         shouldFail: "error code 177"
     },
+    "Should only install ports dependent on": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                        
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port2")
+
+                    project.res("dependency")
+
+                    project.res("dependency2",
+                        port.res("dependency2")
+                    )
+                `,
+                "dependency": {
+                    "index.js": ""
+                },
+                "dependency2": {
+                    "index.js": ""
+                }
+            },
+            "port2": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency2")
+                `,
+                "dependency2": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`git add . && git commit -m "Initial commit"`, "./port2")
+            await run(`ucpem install`, "./project")
+            const info = await run(`ucpem info`, "./project")
+
+            notIncludes(info, "port2")
+        }
+    }
 
 }

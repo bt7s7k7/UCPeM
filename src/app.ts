@@ -12,6 +12,7 @@ const commands = {
     _devinfo: {
         desc: "Displays information about the current project",
         async callback() {
+            DependencyTracker.setInitProject()
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
             project.loadAllPorts()
 
@@ -21,6 +22,7 @@ const commands = {
     info: {
         desc: "Displays information about the current project",
         async callback() {
+            DependencyTracker.setInitProject()
             const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
             project.loadAllPorts()
 

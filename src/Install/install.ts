@@ -12,7 +12,7 @@ export async function install() {
 
     const iter = async (first = false) => {
         DependencyTracker.reset()
-
+        DependencyTracker.setInitProject()
         const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
         const portFolderPath = project.portFolderPath
 

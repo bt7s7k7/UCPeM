@@ -136,7 +136,7 @@ export const cases: Record<string, TestCase> = {
             }
         },
         async callback() {
-            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
         }
     },
@@ -169,7 +169,7 @@ export const cases: Record<string, TestCase> = {
             }
         },
         async callback() {
-            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
         },
         shouldFail: "error code 177"
@@ -223,8 +223,8 @@ export const cases: Record<string, TestCase> = {
             }
         },
         async callback() {
-            await run(`git add . && git commit -m "Initial commit"`, "./port")
-            await run(`git add . && git commit -m "Initial commit"`, "./port2")
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`git add . && git commit -m "Initial commit"`, "./port2", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
             const info = await run(`ucpem info`, "./project")
 

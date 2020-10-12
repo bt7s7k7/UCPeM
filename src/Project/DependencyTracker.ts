@@ -13,7 +13,7 @@ export const DependencyTracker = new class DependencyTracker {
         const name = parseNameFromPath(source)
 
         if (name in this.portIndex && this.portIndex[name] != source) {
-            throw new RangeError(`Duplicate import of port "${name}" with different source (new)"${source}" != (orig)"${this.portIndex[name]}"`)
+            throw new RangeError(`E096 Duplicate import of port "${name}" with different source (new)"${source}" != (orig)"${this.portIndex[name]}"`)
         }
 
         this.portIndex[name] = source
@@ -28,7 +28,7 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public addResource(resource: Resource) {
-        if (resource.id in this.resourceIndex) throw new RangeError(`Duplicate registration of resource "${resource.id}"`)
+        if (resource.id in this.resourceIndex) throw new RangeError(`E214 Duplicate registration of resource "${resource.id}"`)
 
         this.resourceIndex[resource.id] = resource
         resource.dependencies.forEach(v => !(v in this.resourceIndex) && this.unresolvedDependencies.add(v))
@@ -64,7 +64,7 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public addProject(project: Project) {
-        if (project.name in this.projectIndex) throw new RangeError(`Duplicate registration of project "${project.name}"`)
+        if (project.name in this.projectIndex) throw new RangeError(`E021 Duplicate registration of project "${project.name}"`)
 
         this.projectIndex[project.name] = project
         if (this.unresolvedPorts.has(project.name)) this.unresolvedPorts.delete(project.name)

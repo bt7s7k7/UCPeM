@@ -7,7 +7,7 @@ export class ProjectBuilder {
     protected resources = {} as Record<string, Resource>
 
     public addResource(resource: Resource) {
-        if (resource.id in this.resources) throw new RangeError(`Duplicate definition of resource "${resource.id}"`)
+        if (resource.id in this.resources) throw new RangeError(`E131 Duplicate definition of resource "${resource.id}"`)
         this.resources[resource.id] = resource
     }
 

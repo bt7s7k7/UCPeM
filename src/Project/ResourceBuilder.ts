@@ -7,7 +7,7 @@ export class ResourceBuilder {
     protected internal = false
 
     public addDependency(id: string) {
-        if (this.dependencies.has(id)) throw new RangeError(`Duplicate import of dependency "${id}"`)
+        if (this.dependencies.has(id)) throw new RangeError(`E111 Duplicate import of dependency "${id}"`)
         this.dependencies.add(id)
     }
 
@@ -21,11 +21,11 @@ export class ResourceBuilder {
 
     public setInternal() {
         if (!this.internal) this.internal = true
-        else throw new Error("Duplicate private declaration")
+        else throw new Error("E058 Duplicate private declaration")
     }
 
     public setPrepare(func: () => void) {
-        if (this.prepare) throw new Error("Duplicate prepare script definition")
+        if (this.prepare) throw new Error("E057 Duplicate prepare script definition")
         else this.prepare = func
     }
 

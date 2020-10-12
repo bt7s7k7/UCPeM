@@ -40,6 +40,6 @@ export async function install() {
         console.log(`[${chalk.redBright("ERR")}] Still missing the following dependencies: `)
         console.log(chalk.green(`  // Make sure you are importing them from the right port and they aren't private`))
         missingDependencies.forEach(v => console.log("  " + v))
-        throw new UserError("^Not all dependencies were resolved")
+        throw new UserError("^E177 Not all dependencies were resolved")
     }
 }

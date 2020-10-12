@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { createHash } from "crypto"
 import { join } from "path"
 import { inspect } from "util"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
@@ -62,8 +61,7 @@ if (args.length == 0 || !(args[0] in commands)) {
         } else {
             console.error(err)
         }
-        const hash = createHash("md5")
-        hash.update(err.message)
-        process.exit(parseInt(hash.digest("hex"), 16) % 255)
+        let exitCode = parseInt((err.message as string)?.match(/E\d\d\d/)?.[0]?.substr(1) ?? "1")
+        process.exit(exitCode)
     })
 }

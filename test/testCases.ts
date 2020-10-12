@@ -27,11 +27,9 @@ export const cases: Record<string, TestCase> = {
             `
         },
         async callback() {
-            let info = await run("ucpem info")
-
-            includes(info, "resource")
+            await run("ucpem info")
         },
-        shouldFail: "error code 134"
+        shouldFail: "error code 218"
     },
     "Should indicate that a resource is internal": {
         structure: {

@@ -1,8 +1,8 @@
 import chalk from "chalk"
-import { symlinkSync } from "fs"
 import { dirname, join } from "path"
 import { executeCommand } from "../runner"
 import { DependencyTracker } from "./DependencyTracker"
+import { link } from "./link"
 import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
 import { makeResourceID } from "./util"
@@ -47,18 +47,9 @@ export const ConfigManager = new class ConfigManager {
                 return join(...paths)
             },
             link(source, target) {
-                console.log(`Linking ${source} → ${target}`)
-                try {
-                    const fullSourcePath = join(constants.resourcePath, source)
-                    const fullTargetPath = join(constants.resourcePath, target)
-                    symlinkSync(fullSourcePath, fullTargetPath, "junction")
-                } catch (err) {
-                    if (err.code == "EEXIST") {
-                        console.log("File already exists")
-                    } else {
-                        throw err
-                    }
-                }
+                const fullSourcePath = join(constants.resourcePath, source)
+                const fullTargetPath = join(constants.resourcePath, target)
+                link(fullSourcePath, fullTargetPath)
             },
             path(path) {
                 return {
@@ -129,3 +120,5 @@ export const ConfigManager = new class ConfigManager {
         return projectBuilder.build()
     }
 }()
+
+

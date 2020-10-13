@@ -4,6 +4,7 @@ import { join } from "path"
 import { inspect } from "util"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
 import { install } from "./Install/install"
+import { link } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
 import { update } from "./Install/update"
 import { DependencyTracker } from "./Project/DependencyTracker"
@@ -39,6 +40,7 @@ const commands = {
         desc: "Installs all missing ports",
         async callback() {
             await install()
+            await link()
         }
     },
     prepare: {
@@ -54,6 +56,13 @@ const commands = {
             await update()
             await install()
             await DependencyTracker.runPrepares()
+            await link()
+        }
+    },
+    link: {
+        desc: "Links dependencies to resources",
+        async callback() {
+            await link()
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

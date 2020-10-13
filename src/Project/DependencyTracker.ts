@@ -11,6 +11,11 @@ export const DependencyTracker = new class DependencyTracker {
     protected isInitProject = false
     protected rootProject = null as Project | null
 
+    public getRootProject() {
+        if (!this.rootProject) throw new Error("E167 No root project created")
+        return this.rootProject
+    }
+
     public addPort(source: string) {
         const name = parseNameFromPath(source)
 

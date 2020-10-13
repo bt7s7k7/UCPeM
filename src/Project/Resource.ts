@@ -1,6 +1,8 @@
 import chalk from "chalk";
 import { statSync } from "fs";
+import { basename, join } from "path";
 import { DependencyTracker } from "./DependencyTracker";
+import { link } from "./link";
 import { PrepareScript } from "./PrepareScript";
 import { Project } from "./Project";
 
@@ -22,6 +24,19 @@ export class Resource {
 
     public async runPrepare(rootProject: Project, project: Project) {
         await this.prepare?.run(rootProject, project, this)
+    }
+
+    public link(linkLog: Set<string>, resource: Resource = this) {
+        if (resource != this) {
+            const linkName = basename(this.path);
+            link(this.path, join(resource.path, linkName))
+            linkLog.add(linkName)
+        }
+        this.dependencies.forEach(dependency => {
+            const dependResource = DependencyTracker.resolveResource(dependency)
+            if (!dependResource) throw new Error(`Failed to link resource "${this.id}", because dependency "${dependency}" was not resolved`)
+            dependResource.link(linkLog, resource)
+        })
     }
 
     constructor(

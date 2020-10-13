@@ -38,6 +38,11 @@ export class Project {
 
     }
 
+    public linkResources() {
+        const linkLog = new Set<string>()
+        this.resourceList.forEach(v => v.link(linkLog))
+    }
+
     constructor(
         public readonly name: string,
         public readonly path: string,

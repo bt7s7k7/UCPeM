@@ -12,3 +12,4 @@ const outputLines = [
 const output = outputLines.join("\n")
 
 writeFileSync(join(__dirname, "../build/config.d.ts"), output)
+writeFileSync(join(__dirname, "../build/config.json"), JSON.stringify(output))

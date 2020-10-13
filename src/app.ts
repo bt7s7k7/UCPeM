@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import chalk from "chalk"
+import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
-import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { link } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
@@ -63,6 +64,43 @@ const commands = {
         desc: "Links dependencies to resources",
         async callback() {
             await link()
+        }
+    },
+    init: {
+        desc: "Creates a ucpem project",
+        async callback() {
+            const typedefText = require("./config.json")
+
+            try {
+                writeFileSync(".vscode/config.d.ts", typedefText)
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+                else {
+                    mkdirSync(".vscode")
+                    writeFileSync(".vscode/config.d.ts", typedefText)
+                }
+            }
+
+            try {
+                statSync(CONFIG_FILE_NAME)
+            } catch (err) {
+                if (err.code == "ENOENT") {
+                    writeFileSync(CONFIG_FILE_NAME, `/// <reference path="./.vscode/config.d.ts" />` + "\n")
+                } else throw err
+            }
+
+            try {
+                const text = readFileSync(".gitignore")
+
+                if (!text.includes(PORT_FOLDER_NAME)) {
+                    appendFileSync(".gitignore", "\n# UCPEM\n" + PORT_FOLDER_NAME + "\n")
+                }
+                if (!text.includes(".vscode")) {
+                    appendFileSync(".gitignore", "\n/.vscode\n")
+                }
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+            }
         }
     }
 } as Record<string, { desc: string, callback: () => Promise<void> }>

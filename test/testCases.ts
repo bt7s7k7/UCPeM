@@ -1,4 +1,4 @@
-import { statSync } from "fs";
+import { statSync, writeFileSync } from "fs";
 import { join } from "path";
 import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI";
 
@@ -438,4 +438,50 @@ export const cases: Record<string, TestCase> = {
             includes(info, `p/resourcePath: ${JSON.stringify(join(__dirname, dir(), "./project/ucpem_ports/port/dependency"))}`)
         }
     },
+    "Should update all installed ports": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git, constants, prepare } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project, constants, prepare } = require("ucpem")
+
+                    project.res("dependency",
+                    )
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project", { stdio: "ignore" })
+            writeFileSync(join(__dirname, dir(), "./port/ucpem.js"), `
+                const { project, constants, prepare } = require("ucpem")
+
+                project.res("dependency",
+                    prepare(() => {
+                        console.log("__WORKS")
+                    })
+                )
+            `)
+            await run(`git add . && git commit -m "Updated"`, "./port", { stdio: "ignore" })
+            const info = await run(`ucpem update`, "./project")
+
+            includes(info, "__WORKS")
+        }
+    }
 }

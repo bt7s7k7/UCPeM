@@ -5,6 +5,7 @@ import { inspect } from "util"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "./global"
 import { install } from "./Install/install"
 import { preparePrepare } from "./Install/prepare"
+import { update } from "./Install/update"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
@@ -44,6 +45,14 @@ const commands = {
         desc: "Runs prepare scripts for all resources",
         async callback() {
             await preparePrepare()
+            await DependencyTracker.runPrepares()
+        }
+    },
+    update: {
+        desc: "Updates all installed ports",
+        async callback() {
+            await update()
+            await install()
             await DependencyTracker.runPrepares()
         }
     }

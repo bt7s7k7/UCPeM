@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, statSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global";
+import { UserError } from "../UserError";
 import { ConfigManager } from "./ConfigManager";
 import { DependencyTracker } from "./DependencyTracker";
 import { Resource } from "./Resource";
@@ -52,7 +53,13 @@ export class Project {
     }
 
     static fromFile(path: string) {
-        const fileContent = readFileSync(path).toString()
+        let fileContent: string
+        try {
+            fileContent = readFileSync(path).toString()
+        } catch (err) {
+            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file (ucpem.js) in ${dirname(path)}`)
+            else throw err
+        }
 
         return ConfigManager.parseConfig(fileContent, path)
     }

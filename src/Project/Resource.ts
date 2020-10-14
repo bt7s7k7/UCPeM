@@ -1,7 +1,7 @@
 import chalk from "chalk";
-import { readFileSync, statSync, writeFileSync } from "fs";
+import { statSync } from "fs";
 import { basename, join } from "path";
-import { GITIGNORE_SECTION_BEGIN } from "../global";
+import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator";
 import { DependencyTracker } from "./DependencyTracker";
 import { link } from "./link";
 import { PrepareScript } from "./PrepareScript";
@@ -27,45 +27,22 @@ export class Resource {
         await this.prepare?.run(rootProject, project, this)
     }
 
-    public link(linkLog: Set<string> = new Set(), resource: Resource = this) {
+    public link(resource: Resource = this) {
         if (resource != this) {
             const linkName = basename(this.path);
-            link(this.path, join(resource.path, linkName))
-            linkLog.add(linkName)
+            const linkDir = join(resource.path, "..");
+            const linkPath = join(linkDir, linkName);
+            if (linkPath != this.path) {
+                link(this.path, linkPath)
+                GitIgnoreGenerator.addIgnore(linkDir, linkName)
+            }
         }
 
         this.dependencies.forEach(dependency => {
             const dependResource = DependencyTracker.resolveResource(dependency)
             if (!dependResource) throw new Error(`Failed to link resource "${this.id}", because dependency "${dependency}" was not resolved`)
-            dependResource.link(linkLog, resource)
+            dependResource.link(resource)
         })
-
-        if (resource == this) {
-            const ignoreFiles = [
-                GITIGNORE_SECTION_BEGIN,
-                ...linkLog
-            ]
-
-            const gitignorePath = join(this.path, ".gitignore")
-
-            /** Text of the current gitignore */
-            let gitignoreText = ""
-            try {
-                gitignoreText = readFileSync(gitignorePath).toString()
-            } catch (err) {
-                if (err.code != "ENOENT") throw err
-            }
-            /** Index of the start of our generated text */
-            //                                                                  ↓ Subtract one to include the newline we put before our text 
-            const ourTextStart = gitignoreText.indexOf(GITIGNORE_SECTION_BEGIN) - 1
-            /** Text of the gitignore we didn't generate (user set), save it to put it in the new gitignore */
-            //                   ↓ Test if we even found our text, because if not we don't need to slice it out
-            const gitignorePre = ourTextStart == -2 ? gitignoreText : gitignoreText.slice(0, ourTextStart)
-            /** New gitignore text */
-            const gitignoreOutput = gitignorePre + "\n" + ignoreFiles.join("\n") + "\n"
-            // Write the new text to the gitignore
-            writeFileSync(gitignorePath, gitignoreOutput)
-        }
     }
 
     constructor(

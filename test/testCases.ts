@@ -538,10 +538,10 @@ export const cases: Record<string, TestCase> = {
             await run(`ucpem install`, "./project")
 
             try { statSync(join(__dirname, dir(), "./project/resource")) } catch (err) { throw new TestFail(err.message) }
-            try { statSync(join(__dirname, dir(), "./project/resource/dependency")) } catch (err) { throw new TestFail(err.message) }
+            try { statSync(join(__dirname, dir(), "./project/dependency")) } catch (err) { throw new TestFail(err.message) }
 
             try {
-                statSync(join(__dirname, dir(), "./project/resource/dependency2"))
+                statSync(join(__dirname, dir(), "./project/dependency2"))
                 throw new TestFail("Link to an unneeded resource created")
             } catch (err) { if (err.code != "ENOENT") throw new TestFail(err.message) }
         }

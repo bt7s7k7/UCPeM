@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { join } from "path";
 import { performance } from "perf_hooks";
+import { URL } from "url";
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global";
 import { DependencyTracker } from "../Project/DependencyTracker";
 import { Project } from "../Project/Project";
@@ -20,8 +21,17 @@ export async function install() {
 
         const missingPorts = DependencyTracker.getMissingPorts()
         if (missingPorts.length > 0) {
-            for (const { name, path } of missingPorts) {
-                const clonePath = join(portFolderPath, name);
+            for (let { name, path } of missingPorts) {
+                const clonePath = join(portFolderPath, name)
+                if (process.env.UCPEM_TOKEN) {
+                    try {
+                        const url = new URL(path)
+                        url.username = process.env.UCPEM_TOKEN
+                        path = url.href
+                    } catch (err) {
+                        if (err.code != "ERR_INVALID_URL") throw err
+                    }
+                }
                 await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
                 Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
                 await DependencyTracker.runPrepares(name)

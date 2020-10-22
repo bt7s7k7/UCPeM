@@ -101,6 +101,15 @@ project.res("resourceName",
 )
 ```
 
+Sometimes you just want to import a resource to use during development, like testing util scripts:
+```js
+const { project, git } = require("ucpem")
+
+const port = git("../port")
+
+project.prefix("test").use(port.res("testUtil"))
+```
+
 ## Installation
 1. Install globally
 ```

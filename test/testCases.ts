@@ -545,5 +545,76 @@ export const cases: Record<string, TestCase> = {
                 throw new TestFail("Link to an unneeded resource created")
             } catch (err) { if (err.code != "ENOENT") throw new TestFail(err.message) }
         }
+    },
+    "Should properly install use resource": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.use(port.res("dependency"))
+                `
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+
+            try {
+                statSync(join(__dirname, dir(), "project/dependency"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should use prefix with use resource": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.prefix("test").use(port.res("dependency"))
+                `,
+                "test": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+
+            try {
+                statSync(join(__dirname, dir(), "project/test/dependency"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
     }
 }

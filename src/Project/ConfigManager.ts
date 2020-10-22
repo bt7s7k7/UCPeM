@@ -7,6 +7,8 @@ import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
 import { makeResourceID } from "./util"
 
+let anonId = 0
+
 export const ConfigManager = new class ConfigManager {
     parseConfig(configText: string, path: string) {
         const dirPath = dirname(path)
@@ -98,6 +100,10 @@ export const ConfigManager = new class ConfigManager {
                     return {
                         id
                     }
+                },
+                use(dep) {
+                    const name = `__${anonId++}`
+                    this.res(name, dep, api.internal())
                 }
             }
         }

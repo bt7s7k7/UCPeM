@@ -52,15 +52,17 @@ export class Resource {
         public readonly prepare: PrepareScript | null,
         public readonly internal: boolean,
     ) {
-        try {
-            if (!statSync(path).isDirectory()) {
-                throw new TypeError(`E185 Resource path ${this.path} does not point to a directory`)
-            }
-        } catch (err) {
-            if ("code" in err && err.code == "ENOENT") {
-                throw new TypeError(`E218 Resource path ${this.path} does not point to a directory, in fact the file does not exist`)
-            } else {
-                throw err
+        if (!internal) {
+            try {
+                if (!statSync(path).isDirectory()) {
+                    throw new TypeError(`E185 Resource path ${this.path} does not point to a directory`)
+                }
+            } catch (err) {
+                if ("code" in err && err.code == "ENOENT") {
+                    throw new TypeError(`E218 Resource path ${this.path} does not point to a directory, in fact the file does not exist`)
+                } else {
+                    throw err
+                }
             }
         }
 

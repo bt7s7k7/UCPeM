@@ -3,6 +3,7 @@ namespace ConfigAPI {
         prefix(path: string): Project
         path: string
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
+        use(dep: Dependency): void
     }
 
     export interface Port {

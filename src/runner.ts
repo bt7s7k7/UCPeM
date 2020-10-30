@@ -5,10 +5,11 @@ export class RunnerError extends Error { }
 
 export function executeCommand(command: string, cwd: string, options: SpawnOptions = {}) {
     return new Promise<string>((resolve, reject) => {
+        const output = options.stdio != "ignore"
         // Write the command to be executed
-        options.stdio != "ignore" && process.stdout.write(chalk.grey(`> ${cwd} $ ${command}\n\n  `))
+        output && process.stdout.write(chalk.grey(`> ${cwd} $ ${command}\n\n  `))
 
-        if (options.stdio == "ignore") {
+        if (!output) {
             options.stdio = ["ignore", "ignore", "inherit"]
         }
 
@@ -29,7 +30,7 @@ export function executeCommand(command: string, cwd: string, options: SpawnOptio
 
         childProcess.on("error", (err) => reject(err)) // On error spawning, reject
         childProcess.on("exit", (code) => { // On exit
-            console.log("")
+            output && console.log("")
             if (code == 0) { // If success return the output of the command
                 resolve(Buffer.concat(ret).toString())
             } else { // Else throw
@@ -38,14 +39,16 @@ export function executeCommand(command: string, cwd: string, options: SpawnOptio
         })
 
         // Pipe all streams we don't need to process
-        childProcess.stderr?.pipe(process.stderr)
+        childProcess.stderr?.on("data", (chunk: Buffer) => {
+            process.stdout.write(chunk.toString().replace(/\r?\n/g, "\n  "))
+        })
         childProcess.stdin && process.stdin.pipe(childProcess.stdin)
 
         childProcess.stdout?.on("data", (chunk: Buffer) => {
             // Save all output from the command
             ret.push(chunk)
             // Also print it out, but indent so we know it's coming from it
-            process.stdout.write(chunk.toString().replace(/\n\r?/g, "\n  "))
+            process.stdout.write(chunk.toString().replace(/\r?\n/g, "\n  "))
         })
 
     })

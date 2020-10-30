@@ -1,5 +1,5 @@
+import { supportsColor } from "chalk";
 import { statSync, writeFileSync } from "fs";
-import { join } from "path";
 import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI";
 
 export const cases: Record<string, TestCase> = {
@@ -315,7 +315,7 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             const info = await run("ucpem install")
             try {
-                statSync(join(__dirname, dir(), "resource2"))
+                statSync(dir("resource2"))
             } catch (err) {
                 throw new TestFail(err.message)
             }
@@ -424,18 +424,18 @@ export const cases: Record<string, TestCase> = {
             const info = await run(`ucpem install`, "./project")
 
             includes(info, `P/installName: "project"`)
-            includes(info, `P/installPath: ${JSON.stringify(join(__dirname, dir(), "./project"))}`)
+            includes(info, `P/installPath: ${JSON.stringify(dir("./project"))}`)
             includes(info, `P/isPort: false`)
             includes(info, `P/projectName: "project"`)
-            includes(info, `P/projectPath: ${JSON.stringify(join(__dirname, dir(), "./project"))}`)
-            includes(info, `P/resourcePath: ${JSON.stringify(join(__dirname, dir(), "./project/resource"))}`)
+            includes(info, `P/projectPath: ${JSON.stringify(dir("./project"))}`)
+            includes(info, `P/resourcePath: ${JSON.stringify(dir("./project/resource"))}`)
 
             includes(info, `p/installName: "project"`)
-            includes(info, `p/installPath: ${JSON.stringify(join(__dirname, dir(), "./project"))}`)
+            includes(info, `p/installPath: ${JSON.stringify(dir("./project"))}`)
             includes(info, `p/isPort: true`)
             includes(info, `p/projectName: "port"`)
-            includes(info, `p/projectPath: ${JSON.stringify(join(__dirname, dir(), "./project/ucpem_ports/port"))}`)
-            includes(info, `p/resourcePath: ${JSON.stringify(join(__dirname, dir(), "./project/ucpem_ports/port/dependency"))}`)
+            includes(info, `p/projectPath: ${JSON.stringify(dir("./project/ucpem_ports/port"))}`)
+            includes(info, `p/resourcePath: ${JSON.stringify(dir("./project/ucpem_ports/port/dependency"))}`)
         }
     },
     "Should update all installed ports": {
@@ -469,7 +469,7 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
             await run(`ucpem install`, "./project", { stdio: "ignore" })
-            writeFileSync(join(__dirname, dir(), "./port/ucpem.js"), `
+            writeFileSync(dir("./port/ucpem.js"), `
                 const { project, constants, prepare } = require("ucpem")
 
                 project.res("dependency",
@@ -537,11 +537,11 @@ export const cases: Record<string, TestCase> = {
             await run(`git add . && git commit -m "Initial commit"`, "./port2", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
 
-            try { statSync(join(__dirname, dir(), "./project/resource")) } catch (err) { throw new TestFail(err.message) }
-            try { statSync(join(__dirname, dir(), "./project/dependency")) } catch (err) { throw new TestFail(err.message) }
+            try { statSync(dir("./project/resource")) } catch (err) { throw new TestFail(err.message) }
+            try { statSync(dir("./project/dependency")) } catch (err) { throw new TestFail(err.message) }
 
             try {
-                statSync(join(__dirname, dir(), "./project/dependency2"))
+                statSync(dir("./project/dependency2"))
                 throw new TestFail("Link to an unneeded resource created")
             } catch (err) { if (err.code != "ENOENT") throw new TestFail(err.message) }
         }
@@ -575,7 +575,7 @@ export const cases: Record<string, TestCase> = {
             await run(`ucpem install`, "./project")
 
             try {
-                statSync(join(__dirname, dir(), "project/dependency"))
+                statSync(dir("project/dependency"))
             } catch (err) {
                 throw new TestFail(err.message)
             }
@@ -611,7 +611,261 @@ export const cases: Record<string, TestCase> = {
             await run(`ucpem install`, "./project")
 
             try {
-                statSync(join(__dirname, dir(), "project/test/dependency"))
+                statSync(dir("project/test/dependency"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should publish for local linking": {
+        structure: {
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir(".ucpem/port"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should replace local link port": {
+        structure: {
+            "a": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "index.js": ""
+                    }
+                },
+            },
+            "b": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "app.js": ""
+                    }
+                },
+
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
+            await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./b/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir(".ucpem/port/dependency/app.js"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should sync with local link port": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("/invalid/port")
+
+                    project.res("resource", port.res("dependency"))
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    "index.js": ""
+                }
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir("./project/dependency"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should be able to unsync with a local link port": {
+        structure: {
+            "a": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "index.js": ""
+                    }
+                },
+            },
+            "b": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "app.js": ""
+                    }
+                },
+            },
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../b/port")
+
+                    project.res("resource", port.res("dependency"))
+                `,
+                "resource": {}
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
+            await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem unsync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir("./project/dependency/app.js"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should be able to replace a synced local link port": {
+        structure: {
+            "a": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "index.js": ""
+                    }
+                },
+            },
+            "b": {
+                "port": {
+                    git,
+                    "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                    "dependency": {
+                        "app.js": ""
+                    }
+                },
+            },
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../b/port")
+
+                    project.res("resource", port.res("dependency"))
+                `,
+                "resource": {}
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
+            await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir("./project/dependency/index.js"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should not try to update local link port": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                        const { project, git } = require("ucpem")
+    
+                        const port = git("/invalid/port")
+    
+                        project.res("resource", port.res("dependency"))
+                    `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                        const { project } = require("ucpem")
+    
+                        project.res("dependency")
+                    `,
+                "dependency": {
+                    "index.js": ""
+                }
+            },
+        },
+        async callback() {
+            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem update`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir("./project/dependency"))
             } catch (err) {
                 throw new TestFail(err.message)
             }

@@ -110,6 +110,22 @@ const port = git("../port")
 project.prefix("test").use(port.res("testUtil"))
 ```
 
+## Local linking
+During project development it is often beneficial to develop a dependency along with a project. To synchronize an imported port with it's source you can use local linking.
+
+To publish a port for local linking run:
+```
+ucpem sync
+```
+This will create a symlink in a global ucpem folder, from which the port can be linked into a project:
+```
+ucpem sync with <port name>
+```
+
+The global folder is `~/.ucpem` by default but it can be modified with the `UCPEM_LOCAL_PORTS` environmental variable.
+
+Local linking requires node version `^12.10.0`
+
 ## Installation
 1. Install globally
 ```
@@ -128,11 +144,15 @@ Usage:
   ucpem <operation>
 
 Commands:
-  info    - Displays information about the current project
-  install - Installs all missing ports
-  prepare - Runs prepare scripts for all resources
-  update  - Updates all installed ports
-  link    - Links dependencies to resources
-  init    - Creates a ucpem project
+  info        - Displays information about the current project
+  install     - Installs all missing ports
+  prepare     - Runs prepare scripts for all resources
+  update      - Updates all installed ports
+  link        - Links dependencies to resources
+  init        - Creates a ucpem project
+  sync        - Publishes this project for local linking
+  unsync      - Removes this project from local linking
+  sync with   - Syncs with a port that was published for local linking :: Arguments: <name>
+  unsync with - Removes a local linked port that was synced with :: Arguments: <name>
 ```
 Run `ucpem` without arguments to view help.

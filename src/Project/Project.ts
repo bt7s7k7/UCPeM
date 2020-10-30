@@ -31,12 +31,19 @@ export class Project {
             if ("code" in err && err.code == "ENOENT" && err.path == this.portFolderPath) {
                 if (createPortsFolder) {
                     console.log("Ports folder doesn't exist, creating...")
-                    mkdirSync(this.portFolderPath)
+                    this.createPortsFolder()
                     await DependencyTracker.runPrepares(this.name)
                 }
             } else throw err
         }
+    }
 
+    public createPortsFolder() {
+        try {
+            mkdirSync(this.portFolderPath)
+        } catch (err) {
+            if (err.code != "EEXIST") throw err
+        }
     }
 
     public linkResources() {

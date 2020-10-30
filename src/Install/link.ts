@@ -4,7 +4,7 @@ import { DependencyTracker } from "../Project/DependencyTracker"
 import { Project } from "../Project/Project"
 import { GitIgnoreGenerator } from "./GitIgnoreGenerator"
 
-export async function link() {
+export async function linkResources() {
     DependencyTracker.reset()
     DependencyTracker.setInitProject()
     const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))

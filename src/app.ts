@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
+import { appendFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
-import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
-import { link } from "./Install/link"
+import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
 import { update } from "./Install/update"
 import { DependencyTracker } from "./Project/DependencyTracker"
+import { link } from "./Project/link"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
 interface Command {
     desc: string
     callback: () => Promise<void>
-    name?: string
+    name?: string,
+    argc?: number
 }
 
 const commands = {
@@ -47,7 +49,7 @@ const commands = {
         desc: "Installs all missing ports",
         async callback() {
             await install()
-            await link()
+            await linkResources()
         }
     },
     prepare: {
@@ -63,13 +65,13 @@ const commands = {
             await update()
             await install()
             await DependencyTracker.runPrepares()
-            await link()
+            await linkResources()
         }
     },
     link: {
         desc: "Links dependencies to resources",
         async callback() {
-            await link()
+            await linkResources()
         }
     },
     init: {
@@ -108,6 +110,86 @@ const commands = {
                 if (err.code != "ENOENT") throw err
             }
         }
+    },
+    sync: {
+        desc: "Publishes this project for local linking",
+        async callback() {
+            DependencyTracker.setInitProject()
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const linkTarget = join(LOCAL_PORTS_PATH, project.name)
+
+            try { // Create the ports folder
+                mkdirSync(LOCAL_PORTS_PATH)
+            } catch (err) {
+                if (err.code != "EEXIST") throw err
+            }
+
+            try { // Delete the previous link if it exists
+                unlinkSync(linkTarget)
+                console.log(`Port with the same name is already synced, replacing...`)
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+            }
+
+            link(project.path, linkTarget, false, true)
+        }
+    },
+    unsync: {
+        desc: "Removes this project from local linking",
+        async callback() {
+            DependencyTracker.setInitProject()
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const linkTarget = join(LOCAL_PORTS_PATH, project.name)
+
+            try { // Delete the previous link if it exists
+                console.log(`Deleting...`)
+                unlinkSync(linkTarget)
+                console.log(`Done!`)
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+                else throw new UserError("E052 Project was not published")
+            }
+        }
+    },
+    "sync with": {
+        desc: "Syncs with a port that was published for local linking :: Arguments: <name>",
+        async callback() {
+            DependencyTracker.setInitProject()
+            const name = commandArgs[0]
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            project.createPortsFolder()
+            const linkSource = join(LOCAL_PORTS_PATH, name)
+            const linkTarget = join(project.portFolderPath, name)
+
+            try {
+                rmdirSync(linkTarget, { recursive: true })
+                console.log(`A project with name "${name}" was already imported, deleting...`)
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+            }
+
+            link(linkSource, linkTarget, true, false)
+        },
+        argc: 1
+    },
+    "unsync with": {
+        desc: "Removes a local linked port that was synced with :: Arguments: <name>",
+        async callback() {
+            DependencyTracker.setInitProject()
+            const name = commandArgs[0]
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const linkTarget = join(project.portFolderPath, name)
+
+            try {
+                unlinkSync(linkTarget)
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+                else throw new UserError(`E053 Project named "${name}" was not linked`)
+            }
+
+            console.log(`Done! Don't forget to run "ucpem install" to install the port for real`)
+        },
+        argc: 1
     }
 } as Record<string, Command>
 
@@ -123,7 +205,19 @@ if (args.length == 0) {
         const name = args.slice(0, i).join(" ")
         if (name in commands) {
             command = commands[name]
+            const argc = command.argc ?? 0
+
             commandArgs = args.slice(i)
+            if (commandArgs.length != argc) {
+                const commandName = command.desc.split("::")[1]?.trim() ?? command.name ?? name
+                command = {
+                    async callback() {
+                        throw new UserError(`E51 Expected ${argc} arguments but ${commandArgs.length} provided: ${commandName}`)
+                    },
+                    desc: ""
+                }
+            }
+
             break
         }
     }

@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "fs"
+import { lstatSync, readdirSync, statSync } from "fs"
 import { join } from "path"
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global"
 import { DependencyTracker } from "../Project/DependencyTracker"
@@ -13,7 +13,11 @@ export async function update() {
     for (const portFolder of installedPorts) {
         const fullPath = join(project.portFolderPath, portFolder)
         if (statSync(fullPath).isDirectory()) {
-            await executeCommand(`git pull`, fullPath)
+            if (!lstatSync(fullPath).isSymbolicLink()) {
+                await executeCommand(`git pull`, fullPath)
+            } else {
+                console.log(`Not updating "${portFolder}" because it's probably a local link port`)
+            }
         }
     }
 }

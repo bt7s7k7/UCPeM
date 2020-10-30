@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { appendFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
+import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
-import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
 import { update } from "./Install/update"
+import { LocalLinker } from "./LocalLinker"
 import { DependencyTracker } from "./Project/DependencyTracker"
-import { link } from "./Project/link"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
@@ -114,79 +114,26 @@ const commands = {
     sync: {
         desc: "Publishes this project for local linking",
         async callback() {
-            DependencyTracker.setInitProject()
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-            const linkTarget = join(LOCAL_PORTS_PATH, project.name)
-
-            try { // Create the ports folder
-                mkdirSync(LOCAL_PORTS_PATH)
-            } catch (err) {
-                if (err.code != "EEXIST") throw err
-            }
-
-            try { // Delete the previous link if it exists
-                unlinkSync(linkTarget)
-                console.log(`Port with the same name is already synced, replacing...`)
-            } catch (err) {
-                if (err.code != "ENOENT") throw err
-            }
-
-            link(project.path, linkTarget, false, true)
+            new LocalLinker().syncThis()
         }
     },
     unsync: {
         desc: "Removes this project from local linking",
         async callback() {
-            DependencyTracker.setInitProject()
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-            const linkTarget = join(LOCAL_PORTS_PATH, project.name)
-
-            try { // Delete the previous link if it exists
-                console.log(`Deleting...`)
-                unlinkSync(linkTarget)
-                console.log(`Done!`)
-            } catch (err) {
-                if (err.code != "ENOENT") throw err
-                else throw new UserError("E052 Project was not published")
-            }
+            new LocalLinker().unsyncThis()
         }
     },
     "sync with": {
         desc: "Syncs with a port that was published for local linking :: Arguments: <name>",
         async callback() {
-            DependencyTracker.setInitProject()
-            const name = commandArgs[0]
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-            project.createPortsFolder()
-            const linkSource = join(LOCAL_PORTS_PATH, name)
-            const linkTarget = join(project.portFolderPath, name)
-
-            try {
-                rmdirSync(linkTarget, { recursive: true })
-                console.log(`A project with name "${name}" was already imported, deleting...`)
-            } catch (err) {
-                if (err.code != "ENOENT") throw err
-            }
-
-            link(linkSource, linkTarget, true, false)
+            new LocalLinker().syncWith(commandArgs[0])
         },
         argc: 1
     },
     "unsync with": {
         desc: "Removes a local linked port that was synced with :: Arguments: <name>",
         async callback() {
-            DependencyTracker.setInitProject()
-            const name = commandArgs[0]
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-            const linkTarget = join(project.portFolderPath, name)
-
-            try {
-                unlinkSync(linkTarget)
-            } catch (err) {
-                if (err.code != "ENOENT") throw err
-                else throw new UserError(`E053 Project named "${name}" was not linked`)
-            }
-
+            new LocalLinker().unsyncWith(commandArgs[0])
             console.log(`Done! Don't forget to run "ucpem install" to install the port for real`)
         },
         argc: 1

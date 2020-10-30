@@ -1,5 +1,6 @@
+import { fail } from "assert";
 import { supportsColor } from "chalk";
-import { statSync, writeFileSync } from "fs";
+import { lstatSync, statSync, writeFileSync } from "fs";
 import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI";
 
 export const cases: Record<string, TestCase> = {
@@ -866,6 +867,66 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("./project/dependency"))
+            } catch (err) {
+                throw new TestFail(err.message)
+            }
+        }
+    },
+    "Should sync with all installed ports": {
+        structure: {
+            "port1": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency1")
+                `,
+                "dependency1": {
+                    "index.js": ""
+                }
+            },
+            "port2": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency2")
+                `,
+                "dependency2": {
+                    "app.js": ""
+                }
+            },
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port1 = git("../port1")
+                    const port2 = git("../port2")
+
+                    project.res("resource", 
+                        port1.res("dependency1"),
+                        port2.res("dependency2")
+                    )
+                `,
+                "resource": {}
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port1", { stdio: "ignore" })
+            await run(`git add . && git commit -m "Initial commit"`, "./port2", { stdio: "ignore" })
+            await run(`ucpem sync`, "./port1", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port2", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            await run(`ucpem sync with all`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            try {
+                statSync(dir("./project/dependency1"))
+                statSync(dir("./project/dependency2"))
+                lstatSync(dir("./project/ucpem_ports/port1")).isSymbolicLink() || fail("Port1 is not a symlink")
+                lstatSync(dir("./project/ucpem_ports/port2")).isSymbolicLink() || fail("Port2 is not a symlink")
             } catch (err) {
                 throw new TestFail(err.message)
             }

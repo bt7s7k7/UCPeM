@@ -121,6 +121,7 @@ This will create a symlink in a global ucpem folder, from which the port can be 
 ```
 ucpem sync with <port name>
 ```
+You can use `all` as port name to made all installed ports synced if their ports are published for local linking.
 
 The global folder is `~/.ucpem` by default but it can be modified with the `UCPEM_LOCAL_PORTS` environmental variable.
 

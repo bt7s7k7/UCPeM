@@ -12,6 +12,12 @@ import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
+interface Command {
+    desc: string
+    callback: () => Promise<void>
+    name?: string
+}
+
 const commands = {
     _devinfo: {
         desc: "Displays information about the current project",
@@ -103,25 +109,41 @@ const commands = {
             }
         }
     }
-} as Record<string, { desc: string, callback: () => Promise<void> }>
+} as Record<string, Command>
 
 const args = process.argv.slice(2)
 
-if (args.length == 0 || !(args[0] in commands)) {
+let command: Command | null = null
+let commandArgs = [] as string[]
+
+if (args.length == 0) {
+    // Keep null
+} else {
+    for (let i = args.length; i > 0; i--) {
+        const name = args.slice(0, i).join(" ")
+        if (name in commands) {
+            command = commands[name]
+            commandArgs = args.slice(i)
+            break
+        }
+    }
+}
+
+if (command == null) {
     /** All command definitions, excluding the development ones (defined by "_" prefix) */
-    const commandDefs = Object.entries(commands).filter(v => v[0][0] != "_")
+    const commandDefs = Object.entries(commands).map(v => (v[1].name = v[1].name ?? v[0], v[1])).filter(v => v.name![0] != "_")
     /** The length of the longest command (+1 for padding), so we can put all command descs at the same x pos */
-    const maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v[0].length), 0) + 1
+    const maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v.name!.length), 0) + 1
 
     console.log("Usage:\n  ucpem <operation>\n\nCommands:")
     commandDefs.forEach(v => {
-        console.log(`  ${v[0]}${" ".repeat(maxNameLength - v[0].length)}- ${v[1].desc}`)
+        console.log(`  ${v.name}${" ".repeat(maxNameLength - v.name!.length)}- ${v.desc}`)
     })
 
     process.exit(1)
 } else {
     // Call the callback of the specified command and handle errors
-    commands[args[0]].callback().catch(err => {
+    command.callback().catch(err => {
         if (err instanceof UserError) {
             err.message[0] != "^" && console.error(`[${chalk.redBright("ERR")}] ${err.message}`)
         } else {

@@ -3,6 +3,7 @@ import chalk from "chalk"
 import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
+import { Debug } from "./Debug"
 import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
@@ -149,10 +150,18 @@ if (args.length == 0) {
     // Keep null
 } else {
     for (let i = args.length; i > 0; i--) {
-        const name = args.slice(0, i).join(" ")
+        let name = args.slice(0, i).join(" ")
+        let debug = false
+
+        if (name[name.length - 1] == "+") {
+            name = name.substring(0, name.length - 1);
+            debug = true
+        }
+
         if (name in commands) {
             command = commands[name]
             const argc = command.argc ?? 0
+            if (debug) Debug.enable()
 
             commandArgs = args.slice(i)
             if (commandArgs.length != argc) {

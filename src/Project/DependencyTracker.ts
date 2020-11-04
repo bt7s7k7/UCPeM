@@ -1,3 +1,4 @@
+import { Debug } from "../Debug"
 import { Project } from "./Project"
 import { Resource } from "./Resource"
 import { parseNameFromPath, parseResourceID } from "./util"
@@ -10,6 +11,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected unresolvedPorts = new Set<string>()
     protected isInitProject = false
     protected rootProject = null as Project | null
+    protected ignoredResources = {} as Record<string, Resource>
 
     public getRootProject() {
         if (!this.rootProject) throw new Error("E167 No root project created")
@@ -27,6 +29,8 @@ export const DependencyTracker = new class DependencyTracker {
 
         if (!(name in this.projectIndex)) this.unresolvedPorts.add(name)
 
+        Debug.log("DEP", "Created port", source, name)
+
         return name
     }
 
@@ -39,7 +43,27 @@ export const DependencyTracker = new class DependencyTracker {
 
         if (this.unresolvedDependencies.delete(resource.id) || this.isInitProject) {
             this.resourceIndex[resource.id] = resource
-            resource.dependencies.forEach(v => !(v in this.resourceIndex) && this.unresolvedDependencies.add(v))
+            Debug.log("DEP", "Added resource", resource.id)
+            resource.dependencies.forEach(dependency => {
+                if (!(dependency in this.resourceIndex)) {
+                    Debug.log("DEP", "  Unresolved dependency, trying previously ignored resources...", dependency)
+
+                    this.unresolvedDependencies.add(dependency)
+                    if (dependency in this.ignoredResources) {
+                        Debug.log("DEP", "    Found!")
+                        this.addResource(this.ignoredResources[dependency])
+                        delete this.ignoredResources[dependency]
+                    } else {
+                        Debug.log("DEP", "    Failed!")
+                    }
+
+                } else {
+                    Debug.log("DEP", "  Resolved dependency", dependency)
+                }
+            })
+        } else {
+            Debug.log("DEP", "Ignoring resource", resource.id)
+            this.ignoredResources[resource.id] = resource
         }
     }
 

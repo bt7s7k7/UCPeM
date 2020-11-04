@@ -27,7 +27,7 @@ export class ResourceBuilder {
 
     public setPrepare(func: PrepareScript["callback"]) {
         if (this.prepare) throw new Error("E057 Duplicate prepare script definition")
-        else this.prepare = new PrepareScript(func, this.constants)
+        else this.prepare = new PrepareScript(func, this.constants, this.id, this.path)
     }
 
     constructor(

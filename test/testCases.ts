@@ -931,5 +931,19 @@ export const cases: Record<string, TestCase> = {
                 throw new TestFail(err.message)
             }
         }
-    }
+    },
+    "Should run the run script": {
+        structure: {
+            "ucpem.js": `
+                const { project } = require("ucpem")
+
+                project.script("hello", async ([what]) => console.log("Hello " + what), { desc: "Says hello", argc: 1 })
+            `
+        },
+        async callback() {
+            let info = await run("ucpem run hello world")
+
+            includes(info, "Hello world")
+        }
+    },
 }

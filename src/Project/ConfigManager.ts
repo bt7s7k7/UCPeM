@@ -5,6 +5,7 @@ import { DependencyTracker } from "./DependencyTracker"
 import { link } from "./link"
 import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
+import { RunScript } from "./RunScript"
 import { makeResourceID } from "./util"
 
 let anonId = 0
@@ -104,6 +105,9 @@ export const ConfigManager = new class ConfigManager {
                 use(dep) {
                     const name = `__${anonId++}`
                     this.res(name, dep, api.internal())
+                },
+                script(name, callback, options) {
+                    DependencyTracker.addRunScript(name, new RunScript(callback, constants, name, options))
                 }
             }
         }

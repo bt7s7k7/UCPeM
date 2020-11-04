@@ -3,7 +3,7 @@ import chalk from "chalk"
 import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
-import { Debug } from "./Debug"
+import { CLI, Command } from "./CLI"
 import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
@@ -14,14 +14,7 @@ import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
-interface Command {
-    desc: string
-    callback: () => Promise<void>
-    name?: string,
-    argc?: number
-}
-
-const commands = {
+const cli = new CLI("ucpem <operation>", {
     _devinfo: {
         desc: "Displays information about the current project",
         async callback() {
@@ -124,80 +117,47 @@ const commands = {
     },
     "sync with": {
         desc: "Syncs with a port that was published for local linking :: Arguments: <name>",
-        async callback() {
+        async callback(commandArgs) {
             new LocalLinker().syncWith(commandArgs[0])
         },
         argc: 1
     },
     "unsync with": {
         desc: "Removes a local linked port that was synced with :: Arguments: <name>",
-        async callback() {
+        async callback(commandArgs) {
             new LocalLinker().unsyncWith(commandArgs[0])
             console.log(`Done! Don't forget to run "ucpem install" to install the port for real`)
         },
         argc: 1
-    }
-} as Record<string, Command>
+    },
+    run: {
+        desc: "Runs a run script :: Arguments: <name> (...)",
+        async callback(args) {
+            const rootProject = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const project = rootProject
 
-const args = process.argv.slice(2)
-
-let command: Command | null = null
-let commandArgs = [] as string[]
-
-if (args.length == 0) {
-    // Keep null
-} else {
-    for (let i = args.length; i > 0; i--) {
-        let name = args.slice(0, i).join(" ")
-        let debug = false
-
-        if (name[name.length - 1] == "+") {
-            name = name.substring(0, name.length - 1);
-            debug = true
-        }
-
-        if (name in commands) {
-            command = commands[name]
-            const argc = command.argc ?? 0
-            if (debug) Debug.enable()
-
-            commandArgs = args.slice(i)
-            if (commandArgs.length != argc) {
-                const commandName = command.desc.split("::")[1]?.trim() ?? command.name ?? name
-                command = {
-                    async callback() {
-                        throw new UserError(`E51 Expected ${argc} arguments but ${commandArgs.length} provided: ${commandName}`)
+            const runCli = new CLI("ucpem run <name>", Object.assign({}, ...Object.values(DependencyTracker.getRunScripts()).map(v => ({
+                [v.name]: {
+                    desc: v.options.desc,
+                    async callback(args) {
+                        await v.prepareRun(rootProject, project)(args)
                     },
-                    desc: ""
-                }
-            }
+                    argc: v.options.argc
+                } as Command
+            }))))
 
-            break
-        }
+            await runCli.run(args)
+        },
+        argc: NaN
     }
-}
+})
 
-if (command == null) {
-    /** All command definitions, excluding the development ones (defined by "_" prefix) */
-    const commandDefs = Object.entries(commands).map(v => (v[1].name = v[1].name ?? v[0], v[1])).filter(v => v.name![0] != "_")
-    /** The length of the longest command (+1 for padding), so we can put all command descs at the same x pos */
-    const maxNameLength = commandDefs.reduce((p, v) => Math.max(p, v.name!.length), 0) + 1
-
-    console.log("Usage:\n  ucpem <operation>\n\nCommands:")
-    commandDefs.forEach(v => {
-        console.log(`  ${v.name}${" ".repeat(maxNameLength - v.name!.length)}- ${v.desc}`)
-    })
-
-    process.exit(1)
-} else {
-    // Call the callback of the specified command and handle errors
-    command.callback().catch(err => {
-        if (err instanceof UserError) {
-            err.message[0] != "^" && console.error(`[${chalk.redBright("ERR")}] ${err.message}`)
-        } else {
-            console.error(err)
-        }
-        let exitCode = parseInt((err.message as string)?.match(/E\d\d\d/)?.[0]?.substr(1) ?? "1")
-        process.exit(exitCode)
-    })
-}
+cli.run(process.argv.slice(2)).catch(err => {
+    if (err instanceof UserError) {
+        err.message[0] != "^" && console.error(`[${chalk.redBright("ERR")}] ${err.message}`)
+    } else {
+        console.error(err)
+    }
+    let exitCode = parseInt((err.message as string)?.match(/E\d\d\d/)?.[0]?.substr(1) ?? "1")
+    process.exit(exitCode)
+})

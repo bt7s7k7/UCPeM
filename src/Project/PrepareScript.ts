@@ -1,25 +1,26 @@
 import chalk from "chalk";
 import { Project } from "./Project";
-import { Resource } from "./Resource";
+import { Script } from "./Script";
 
-export class PrepareScript {
+export class PrepareScript extends Script<() => Promise<void>> {
 
-    public async run(rootProject: Project, project: Project, resource: Resource) {
-        Object.assign(this.constants, {
-            installName: rootProject.name,
-            installPath: rootProject.path,
-            isPort: rootProject != project,
-            projectName: project.name,
-            projectPath: project.path,
-            resourcePath: resource.path
-        } as PrepareScript["constants"])
+    protected getConstantsValues(rootProject: Project, project: Project): Partial<PrepareScript["constants"]> {
+        return {
+            ...super.getConstantsValues(rootProject, project),
+            resourcePath: this.path
+        }
+    }
 
-        console.log(`[${chalk.cyanBright("PREPARE")}] Running prepare script for "${resource.id}"`)
-        await this.callback()
+    protected printRun() {
+        console.log(`[${chalk.cyanBright("PREPARE")}] Running prepare script for "${this.name}"`)
     }
 
     constructor(
-        public readonly callback: () => Promise<void>,
-        public readonly constants: ConfigAPI.API["constants"]
-    ) { }
+        callback: () => Promise<void>,
+        constants: ConfigAPI.API["constants"],
+        name: string,
+        public readonly path: string
+    ) {
+        super(callback, constants, name)
+    }
 }

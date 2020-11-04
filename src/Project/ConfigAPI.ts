@@ -1,9 +1,19 @@
 namespace ConfigAPI {
+    export interface RunScriptOptions {
+        argc?: number
+        desc: string
+    }
+
+    export interface RunScriptCallback {
+        (args: string[]): Promise<void>
+    }
+
     export interface Project {
         prefix(path: string): Project
         path: string
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
         use(dep: Dependency): void
+        script(name: string, callback: RunScriptCallback, options: RunScriptOptions): void
     }
 
     export interface Port {

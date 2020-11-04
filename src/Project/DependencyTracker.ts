@@ -1,6 +1,7 @@
 import { Debug } from "../Debug"
 import { Project } from "./Project"
 import { Resource } from "./Resource"
+import { RunScript } from "./RunScript"
 import { parseNameFromPath, parseResourceID } from "./util"
 
 export const DependencyTracker = new class DependencyTracker {
@@ -12,6 +13,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected isInitProject = true
     protected rootProject = null as Project | null
     protected ignoredResources = {} as Record<string, Resource>
+    protected runScripts = {} as Record<string, RunScript>
 
     public getRootProject() {
         if (!this.rootProject) throw new Error("E167 No root project created")
@@ -147,5 +149,19 @@ export const DependencyTracker = new class DependencyTracker {
             if (forPortName && portName != forPortName) continue
             await resource.runPrepare(this.rootProject!, this.projectIndex[portName])
         }
+    }
+
+    public addRunScript(name: string, script: RunScript) {
+        if (this.isInitProject) {
+            if (name in this.runScripts) {
+                throw new Error(`E060 Duplicate script registration for "${name}"`)
+            }
+
+            this.runScripts[name] = script
+        }
+    }
+
+    public getRunScripts() {
+        return { ...this.runScripts }
     }
 }()

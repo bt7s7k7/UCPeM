@@ -24,7 +24,7 @@ export class Resource {
     }
 
     public async runPrepare(rootProject: Project, project: Project) {
-        await this.prepare?.run(rootProject, project, this)
+        await this.prepare?.prepareRun(rootProject, project)()
     }
 
     public link(resource: Resource = this) {

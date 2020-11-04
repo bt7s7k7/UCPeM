@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, statSync } from "fs";
-import { dirname, join } from "path";
+import { basename, dirname, join } from "path";
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global";
 import { UserError } from "../UserError";
 import { ConfigManager } from "./ConfigManager";
@@ -69,5 +69,9 @@ export class Project {
         }
 
         return ConfigManager.parseConfig(fileContent, path)
+    }
+
+    static createDummy(path: string) {
+        return new Project(basename(path), path, {})
     }
 }

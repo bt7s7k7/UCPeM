@@ -941,9 +941,93 @@ export const cases: Record<string, TestCase> = {
             `
         },
         async callback() {
-            let info = await run("ucpem run hello world")
+            const info = await run("ucpem run !hello world")
 
             includes(info, "Hello world")
         }
     },
+    "Should run script from external port": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+                `
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+                    project.script("hello", async ([what]) => console.log("Hello " + what), { desc: "Says hello", argc: 1 })
+                `,
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            const info = await run(`ucpem run ../port!hello world`, "./project")
+
+            includes(info, "Hello world")
+        }
+    },
+    "Should run script in a non-project folder": {
+        structure: {
+            "project": {},
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+                    project.script("hello", async ([what]) => console.log("Hello " + what), { desc: "Says hello", argc: 1 })
+                `,
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            const info = await run(`ucpem run ../port!hello world`, "./project")
+
+            includes(info, "Hello world")
+        }
+    },
+    "Should provide the correct paths for the script": {
+        structure: {
+            "project": {},
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project, constants } = require("ucpem")
+                    project.script("path", async () => console.log("Path: [" + constants.installPath + "]"), { desc: "" })
+                `,
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            const info = await run(`ucpem run ../port!path`, "./project")
+
+            includes(info, "[" + dir("project") + "]")
+        }
+    },
+    "Should run script from local linked port": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": ``,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.script("hello", async ([what]) => console.log("Hello " + what), { desc: "Says hello", argc: 1 })
+                `,
+            },
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            const info = await run(`ucpem run /port!hello world`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
+            includes(info, "Hello world")
+        }
+    }
 }

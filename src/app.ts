@@ -3,7 +3,7 @@ import chalk from "chalk"
 import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
-import { CLI, Command } from "./CLI"
+import { CLI } from "./CLI"
 import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
@@ -12,6 +12,7 @@ import { update } from "./Install/update"
 import { LocalLinker } from "./LocalLinker"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
+import { runScript } from "./runScript"
 import { UserError } from "./UserError"
 
 const cli = new CLI("ucpem <operation>", {
@@ -118,7 +119,7 @@ const cli = new CLI("ucpem <operation>", {
     "sync with": {
         desc: "Syncs with a port that was published for local linking :: Arguments: <name>",
         async callback(commandArgs) {
-            new LocalLinker().syncWith(commandArgs[0])
+            new LocalLinker().syncWith(commandArgs[0], true)
         },
         argc: 1
     },
@@ -133,20 +134,7 @@ const cli = new CLI("ucpem <operation>", {
     run: {
         desc: "Runs a run script :: Arguments: <name> (...)",
         async callback(args) {
-            const rootProject = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-            const project = rootProject
-
-            const runCli = new CLI("ucpem run <name>", Object.assign({}, ...Object.values(DependencyTracker.getRunScripts()).map(v => ({
-                [v.name]: {
-                    desc: v.options.desc,
-                    async callback(args) {
-                        await v.prepareRun(rootProject, project)(args)
-                    },
-                    argc: v.options.argc
-                } as Command
-            }))))
-
-            await runCli.run(args)
+            await runScript(args)
         },
         argc: NaN
     }
@@ -161,3 +149,4 @@ cli.run(process.argv.slice(2)).catch(err => {
     let exitCode = parseInt((err.message as string)?.match(/E\d\d\d/)?.[0]?.substr(1) ?? "1")
     process.exit(exitCode)
 })
+

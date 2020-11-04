@@ -38,17 +38,21 @@ export class LocalLinker {
         }
     }
 
-    public syncWith(name: string) {
+    public syncWith(name: string, checkAvailability: boolean) {
         if (name == "all") {
             const allAvailablePorts = new Set(this.getAllAvailablePorts().map(v => v.name))
             const allImportedPorts = [...this.getAllLinkedPorts(), ...this.getAllRealPorts()].map(v => v.name)
 
             allImportedPorts.filter(v => allAvailablePorts.has(v)).forEach(name => {
                 console.log(`Syncing with "${name}"...`)
-                this.syncWith(name)
+                this.syncWith(name, false)
             })
 
             return
+        }
+
+        if (checkAvailability && this.getAllAvailablePorts().filter(v => v.name == name).length == 0) {
+            throw new UserError(`E065 There is no local linked project "${name}"`)
         }
 
         this.project.createPortsFolder()

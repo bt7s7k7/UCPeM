@@ -1,4 +1,5 @@
 import { Debug } from "../Debug"
+import { GITHUB_PREFIX } from "../global"
 import { Project } from "./Project"
 import { Resource } from "./Resource"
 import { RunScript } from "./RunScript"
@@ -37,7 +38,7 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public addGithubPort(source: string) {
-        return this.addPort("https://github.com/" + source)
+        return this.addPort(GITHUB_PREFIX + source)
     }
 
     public addResource(resource: Resource) {

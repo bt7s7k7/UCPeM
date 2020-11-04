@@ -78,6 +78,9 @@ export const ConfigManager = new class ConfigManager {
             async run(command: string) {
                 await executeCommand(command, dirPath)
             },
+            async ucpem(command: string) {
+                await executeCommand("node " + require.main?.filename + " " + command, dirPath)
+            },
             project: {
                 path: dirPath,
                 prefix(prefix) {

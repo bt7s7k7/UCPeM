@@ -9,7 +9,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected resourceIndex = {} as Record<string, Resource>
     protected unresolvedDependencies = new Set<string>()
     protected unresolvedPorts = new Set<string>()
-    protected isInitProject = false
+    protected isInitProject = true
     protected rootProject = null as Project | null
     protected ignoredResources = {} as Record<string, Resource>
 
@@ -137,10 +137,6 @@ export const DependencyTracker = new class DependencyTracker {
 
     public getMissingDependencies() {
         return [...this.unresolvedDependencies]
-    }
-
-    public setInitProject() {
-        this.isInitProject = true
     }
 
     public async runPrepares(forPortName: string | null = null) {

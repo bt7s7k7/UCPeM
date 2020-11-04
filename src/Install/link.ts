@@ -6,7 +6,6 @@ import { GitIgnoreGenerator } from "./GitIgnoreGenerator"
 
 export async function linkResources() {
     DependencyTracker.reset()
-    DependencyTracker.setInitProject()
     const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
 
     await project.loadAllPorts(true)

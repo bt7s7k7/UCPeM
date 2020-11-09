@@ -52,9 +52,9 @@ namespace ConfigAPI {
         /** Joins paths together */
         join(...paths: string[]): string
         /** Runs a command, cwd is resource path. Only available during callbacks */
-        run(command: string): Promise<void>
+        run(command: string, cwd?: string): Promise<void>
         /** Runs an UCPeM command */
-        ucpem(command: string): Promise<void>
+        ucpem(command: string, cwd?: string): Promise<void>
         constants: {
             /** Path of the resource the callback is executed for */
             readonly resourcePath: string

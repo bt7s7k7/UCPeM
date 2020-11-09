@@ -75,11 +75,11 @@ export const ConfigManager = new class ConfigManager {
                     }
                 }
             },
-            async run(command: string) {
-                await executeCommand(command, dirPath)
+            async run(command: string, cwd: string = dirPath) {
+                await executeCommand(command, cwd)
             },
-            async ucpem(command: string) {
-                await executeCommand("node " + require.main?.filename + " " + command, dirPath)
+            async ucpem(command: string, cwd: string = dirPath) {
+                await executeCommand("node " + require.main?.filename + " " + command, cwd)
             },
             project: {
                 path: dirPath,

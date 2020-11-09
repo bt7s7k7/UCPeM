@@ -298,6 +298,32 @@ export const cases: Record<string, TestCase> = {
             includes(info, "__WORKS")
         }
     },
+    "Should correctly execute the run utility with the correct cwd": {
+        structure: {
+            "ucpem.js": `
+                const { project, prepare, run } = require("ucpem")
+
+                project.res("resource",
+                    prepare(async () => {
+                        await run("echo __WORKS > test.txt", constants.resourcePath)
+                    })
+                )
+            `,
+            "resource": {
+                "index.js": `console.log("Hi")`
+            }
+        },
+        async callback() {
+            const info = await run("ucpem install")
+
+            try {
+                statSync(dir("resource/test.txt")).isFile() || fail("Required file is not a file")
+            } catch (err) {
+                if (err.code != "ENOENT") throw err
+                else fail("Required file was not found")
+            }
+        }
+    },
     "Should correctly execute the link utility": {
         structure: {
             "ucpem.js": `

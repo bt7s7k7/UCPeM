@@ -9,7 +9,8 @@
         "test-dev": "ts-node-dev --cls --watch ./build --respawn ./test/test.ts",
         "test-release": "npm run build && ncc build build/app.js && ts-node ./test/test.ts ./dist/index.js",
         "test": "npm run build && npm link --force && ts-node ./test/test.ts",
-        "buildConfigTypedef": "node build/configTypedefBuilder.js"
+        "buildConfigTypedef": "node build/configTypedefBuilder.js",
+        "typedef": "node build/configTypedefBuilder.js"
     },
     "files": [
         "build/**/*",

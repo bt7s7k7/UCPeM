@@ -29,7 +29,7 @@ export async function runScript(args: string[]) {
             Debug.log("RUN", "There is no command name provided")
             return rootProject
         } else {
-            const fragments = args[0].split("!")
+            const fragments = args[0].split("+")
             Debug.log("RUN", "Parsing command name...", fragments)
 
             if (fragments.length == 1) {

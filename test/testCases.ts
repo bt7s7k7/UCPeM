@@ -941,7 +941,7 @@ export const cases: Record<string, TestCase> = {
             `
         },
         async callback() {
-            const info = await run("ucpem run !hello world")
+            const info = await run("ucpem run +hello world")
 
             includes(info, "Hello world")
         }
@@ -964,7 +964,7 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            const info = await run(`ucpem run ../port!hello world`, "./project")
+            const info = await run(`ucpem run ../port+hello world`, "./project")
 
             includes(info, "Hello world")
         }
@@ -982,7 +982,7 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            const info = await run(`ucpem run ../port!hello world`, "./project")
+            const info = await run(`ucpem run ../port+hello world`, "./project")
 
             includes(info, "Hello world")
         }
@@ -1000,7 +1000,7 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            const info = await run(`ucpem run ../port!path`, "./project")
+            const info = await run(`ucpem run ../port+path`, "./project")
 
             includes(info, "[" + dir("project") + "]")
         }
@@ -1025,7 +1025,7 @@ export const cases: Record<string, TestCase> = {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
             await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
 
-            const info = await run(`ucpem run /port!hello world`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            const info = await run(`ucpem run /port+hello world`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
 
             includes(info, "Hello world")
         }

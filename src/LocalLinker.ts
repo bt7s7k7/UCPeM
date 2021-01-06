@@ -1,13 +1,14 @@
 import { lstatSync, mkdirSync, readdirSync, rmdirSync, statSync, unlinkSync } from "fs"
 import { join } from "path"
 import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH } from "./global"
+import { LocalPortsScout } from "./LocalPortsScout"
 import { link } from "./Project/link"
 import { Project } from "./Project/Project"
 import { UserError } from "./UserError"
 
 export class LocalLinker {
     public syncThis() {
-        const linkTarget = this.getPathFor(this.project.name)
+        const linkTarget = LocalPortsScout.getPathFor(this.project.name)
 
         try { // Create the ports folder
             mkdirSync(LOCAL_PORTS_PATH)
@@ -26,7 +27,7 @@ export class LocalLinker {
     }
 
     public unsyncThis() {
-        const linkTarget = this.getPathFor(this.project.name)
+        const linkTarget = LocalPortsScout.getPathFor(this.project.name)
 
         try { // Delete the previous link if it exists
             console.log(`Deleting...`)
@@ -40,7 +41,7 @@ export class LocalLinker {
 
     public syncWith(name: string, checkAvailability: boolean) {
         if (name == "all") {
-            const allAvailablePorts = new Set(this.getAllAvailablePorts().map(v => v.name))
+            const allAvailablePorts = new Set(LocalPortsScout.getAllAvailablePorts().map(v => v.name))
             const allImportedPorts = [...this.getAllLinkedPorts(), ...this.getAllRealPorts()].map(v => v.name)
 
             allImportedPorts.filter(v => allAvailablePorts.has(v)).forEach(name => {
@@ -51,12 +52,12 @@ export class LocalLinker {
             return
         }
 
-        if (checkAvailability && this.getAllAvailablePorts().filter(v => v.name == name).length == 0) {
+        if (checkAvailability && LocalPortsScout.getAllAvailablePorts().filter(v => v.name == name).length == 0) {
             throw new UserError(`E065 There is no local linked project "${name}"`)
         }
 
         this.project.createPortsFolder()
-        const linkSource = this.getPathFor(name)
+        const linkSource = LocalPortsScout.getPathFor(name)
         const linkTarget = this.getLocalPathFor(name)
 
         try {
@@ -91,33 +92,11 @@ export class LocalLinker {
         }
     }
 
-    protected readonly project: Project
-
-    protected getPathFor(name: string) {
-        return join(LOCAL_PORTS_PATH, name)
-    }
-
-    protected getLocalPathFor(name: string) {
+    public getLocalPathFor(name: string) {
         return join(this.project.portFolderPath, name)
     }
 
-    protected getAllAvailablePorts() {
-        let files: string[]
-
-        try {
-            files = readdirSync(LOCAL_PORTS_PATH)
-        } catch (err) {
-            if (err.code != "ENOENT") throw err
-            else return []
-        }
-
-        return files
-            .map(v => ({ name: v, path: join(LOCAL_PORTS_PATH, v) }))
-            .map(v => ({ ...v, isDirectory: statSync(v.path).isDirectory(), isLink: lstatSync(v.path).isSymbolicLink() }))
-            .filter(v => v.isDirectory && v.isLink)
-    }
-
-    protected getAllRealPorts() {
+    public getAllRealPorts() {
         let files: string[]
 
         try {
@@ -133,7 +112,8 @@ export class LocalLinker {
             .filter(v => v.isDirectory && !v.isLink)
     }
 
-    protected getAllLinkedPorts() {
+    public getAllLinkedPorts() {
+
         let files: string[]
 
         try {
@@ -149,7 +129,7 @@ export class LocalLinker {
             .filter(v => v.isDirectory && v.isLink)
     }
 
-    constructor() {
-        this.project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
-    }
+    constructor(
+        protected readonly project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+    ) { }
 }

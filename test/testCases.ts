@@ -797,7 +797,7 @@ export const cases: Record<string, TestCase> = {
 
             await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
             await run(`ucpem unsync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem install remote`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
 
             try {
                 statSync(dir("./project/dependency/app.js"))

@@ -2,18 +2,22 @@ import chalk from "chalk";
 import { join } from "path";
 import { performance } from "perf_hooks";
 import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global";
+import { LocalLinker } from "../LocalLinker";
+import { LocalPortsScout } from "../LocalPortsScout";
 import { DependencyTracker } from "../Project/DependencyTracker";
 import { Project } from "../Project/Project";
 import { processClonePath } from "../Project/util";
 import { executeCommand } from "../runner";
 import { UserError } from "../UserError";
 
-export async function install() {
+export async function install(remoteOnly = false) {
     const start = performance.now()
+    const availablePorts = LocalPortsScout.getAllAvailablePorts()
 
     const iter = async (first = false) => {
         DependencyTracker.reset()
         const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+        const localLinker = new LocalLinker(project)
         const portFolderPath = project.portFolderPath
 
         await project.loadAllPorts(true)
@@ -21,11 +25,16 @@ export async function install() {
         const missingPorts = DependencyTracker.getMissingPorts()
         if (missingPorts.length > 0) {
             for (let { name, path } of missingPorts) {
-                const clonePath = join(portFolderPath, name)
-                path = processClonePath(path)
-                await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
-                Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
-                await DependencyTracker.runPrepares(name)
+                if (!remoteOnly && availablePorts.find(v => v.name == name)) {
+                    console.log(chalk.yellow(`Using local copy of port "${name}"...`))
+                    localLinker.syncWith(name, false)
+                } else {
+                    const clonePath = join(portFolderPath, name)
+                    path = processClonePath(path)
+                    await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
+                    Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
+                    await DependencyTracker.runPrepares(name)
+                }
             }
             await iter()
         } else {

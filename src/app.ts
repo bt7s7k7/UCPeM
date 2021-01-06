@@ -45,6 +45,13 @@ const cli = new CLI("ucpem <operation>", {
             await linkResources()
         }
     },
+    "install remote": {
+        desc: "Install all missing ports without using local ports",
+        async callback() {
+            await install(true)
+            await linkResources()
+        }
+    },
     prepare: {
         desc: "Runs prepare scripts for all resources",
         async callback() {

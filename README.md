@@ -125,6 +125,8 @@ You can use `all` as port name to made all installed ports synced if their ports
 
 The global folder is `~/.ucpem` by default but it can be modified with the `UCPEM_LOCAL_PORTS` environmental variable.
 
+By default during `ucpem install`, local ports are used before cloning a remote copy, to install remote ports only run `ucpem install remote`.
+
 Local linking requires node version `^12.10.0`
 
 ## Installation
@@ -145,15 +147,17 @@ Usage:
   ucpem <operation>
 
 Commands:
-  info        - Displays information about the current project
-  install     - Installs all missing ports
-  prepare     - Runs prepare scripts for all resources
-  update      - Updates all installed ports
-  link        - Links dependencies to resources
-  init        - Creates a ucpem project
-  sync        - Publishes this project for local linking
-  unsync      - Removes this project from local linking
-  sync with   - Syncs with a port that was published for local linking :: Arguments: <name>
-  unsync with - Removes a local linked port that was synced with :: Arguments: <name>
+  info           - Displays information about the current project
+  install        - Installs all missing ports
+  install remote - Install all missing ports without using local ports
+  prepare        - Runs prepare scripts for all resources
+  update         - Updates all installed ports
+  link           - Links dependencies to resources
+  init           - Creates a ucpem project
+  sync           - Publishes this project for local linking
+  unsync         - Removes this project from local linking
+  sync with      - Syncs with a port that was published for local linking :: Arguments: <name>
+  unsync with    - Removes a local linked port that was synced with :: Arguments: <name>
+  run            - Runs a run script :: Arguments: <name> (...)
 ```
 Run `ucpem` without arguments to view help.

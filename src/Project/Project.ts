@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, readFileSync, statSync } from "fs";
+import { mkdirSync, readdirSync, readFileSync, Stats, statSync, unlinkSync } from "fs";
 import { basename, dirname, join } from "path";
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global";
 import { UserError } from "../UserError";
@@ -23,8 +23,20 @@ export class Project {
 
             for (const portFolder of installedPorts) {
                 const fullPath = join(this.portFolderPath, portFolder)
-                if (statSync(fullPath).isDirectory()) {
-                    Project.fromFile(join(fullPath, CONFIG_FILE_NAME))
+                let stats: Stats | null = null
+                try {
+                    stats = statSync(fullPath)
+                } catch (err) {
+                    if (err.code == "ENOENT") {
+                        console.log(`Detected broken link for "${portFolder}", deleting...`)
+                        unlinkSync(fullPath)
+                    }
+                }
+
+                if (stats) {
+                    if (stats.isDirectory()) {
+                        Project.fromFile(join(fullPath, CONFIG_FILE_NAME))
+                    }
                 }
             }
         } catch (err) {

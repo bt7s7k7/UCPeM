@@ -19,8 +19,9 @@ export class PrepareScript extends Script<() => Promise<void>> {
         callback: () => Promise<void>,
         constants: ConfigAPI.API["constants"],
         name: string,
+        offset: string,
         public readonly path: string
     ) {
-        super(callback, constants, name)
+        super(callback, constants, name, offset)
     }
 }

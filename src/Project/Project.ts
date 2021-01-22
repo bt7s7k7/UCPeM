@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs";
 import { basename, join } from "path";
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global";
-import { ConfigManager } from "./ConfigManager";
+import { ConfigLoader } from "./ConfigManager";
 import { DependencyTracker } from "./DependencyTracker";
 import { Resource } from "./Resource";
 
@@ -71,7 +71,7 @@ export class Project {
     }
 
     static fromFile(path: string) {
-        return ConfigManager.parseConfig(path)
+        return ConfigLoader.parseConfig(path)
     }
 
     static createDummy(path: string) {

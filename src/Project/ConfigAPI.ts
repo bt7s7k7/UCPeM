@@ -55,6 +55,9 @@ namespace ConfigAPI {
         run(command: string, cwd?: string): Promise<void>
         /** Runs an UCPeM command */
         ucpem(command: string, cwd?: string): Promise<void>
+        /** Includes a config file and returns the resources defined within */
+        include(path: string): Record<string, Resource>
+
         constants: {
             /** Path of the resource the callback is executed for */
             readonly resourcePath: string

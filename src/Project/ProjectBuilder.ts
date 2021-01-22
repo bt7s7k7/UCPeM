@@ -15,5 +15,5 @@ export class ProjectBuilder {
         return new Project(this.name, this.path, this.resources)
     }
 
-    public constructor(protected path: string) { }
+    public constructor(public readonly path: string) { }
 }

@@ -1057,5 +1057,31 @@ export const cases: Record<string, TestCase> = {
 
             includes(info, "Hello world")
         }
+    },
+    "Should include resources from included config file": {
+        structure: {
+            git,
+            "ucpem.js": `
+                const { include } = require("ucpem")
+
+                include("package/ucpem.js")
+            `,
+            package: {
+                "ucpem.js": `
+                    const { project, prepare, constants } = require("ucpem")
+
+                    project.res("resource",
+                        prepare(() => {
+                            console.log(constants)
+                        })
+                    )
+                `,
+                resource: {}
+            }
+        },
+        async callback() {
+            includes(await run(`ucpem info`, ".", runnerSettings()), ".temp!resource")
+            includes(await run(`ucpem prepare`, ".", runnerSettings()), `projectPath: '${dir("")}/package'`)
+        }
     }
 }

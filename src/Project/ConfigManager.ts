@@ -1,7 +1,6 @@
 import chalk from "chalk"
 import { readFileSync } from "fs"
-import { dirname, join } from "path"
-import { CONFIG_FILE_NAME } from "../global"
+import { dirname, join, relative } from "path"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
 import { DependencyTracker } from "./DependencyTracker"
@@ -13,18 +12,26 @@ import { makeResourceID } from "./util"
 
 let anonId = 0
 
-export namespace ConfigManager {
+export namespace ConfigLoader {
     export function parseConfig(path: string) {
+        const dirPath = dirname(path)
+        const projectBuilder = new ProjectBuilder(dirPath)
+
+        loadConfigFile(path, dirPath, projectBuilder)
+
+        return projectBuilder.build()
+    }
+
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder) {
+        const offset = relative(projectBuilder.path, dirPath)
+
         let configText: string
         try {
             configText = readFileSync(path).toString()
         } catch (err) {
-            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file (${CONFIG_FILE_NAME}) in ${dirname(path)}`)
+            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
             else throw err
         }
-
-
-        const dirPath = dirname(path)
         const script = `(__api) => {${configText.replace(`require("ucpem")`, "__api")}}`
 
         const constants: ConfigAPI.API["constants"] = {
@@ -36,7 +43,6 @@ export namespace ConfigManager {
             resourcePath: ""
         }
 
-        const projectBuilder = new ProjectBuilder(dirPath)
 
         const makePort = (portName: string): ConfigAPI.Port => {
             return {
@@ -47,6 +53,8 @@ export namespace ConfigManager {
                 }
             }
         }
+
+        const createdResources: Record<string, ConfigAPI.Resource> = {}
 
         const api: ConfigAPI.API = {
             constants,
@@ -93,6 +101,11 @@ export namespace ConfigManager {
             async ucpem(command: string, cwd: string = dirPath) {
                 await executeCommand("node " + require.main?.filename + " " + command, cwd)
             },
+            include(path) {
+                const target = join(dirPath, path)
+
+                return loadConfigFile(target, dirname(target), projectBuilder)
+            },
             project: {
                 path: dirPath,
                 prefix(prefix) {
@@ -100,7 +113,7 @@ export namespace ConfigManager {
                 },
                 res(name, ...mods) {
                     const id = makeResourceID(projectBuilder.name, name)
-                    const resourceBuilder = new ResourceBuilder(id, join(this.path, name), constants)
+                    const resourceBuilder = new ResourceBuilder(id, join(this.path, name), offset, constants)
 
                     for (const mod of mods) {
                         if ("id" in mod) {
@@ -113,16 +126,16 @@ export namespace ConfigManager {
                     const resource = resourceBuilder.build()
                     projectBuilder.addResource(resource)
 
-                    return {
-                        id
-                    }
+                    const createdResource = { id }
+                    createdResources[id] = createdResource
+                    return createdResource
                 },
                 use(dep) {
                     const name = `__${anonId++}`
                     this.res(name, dep, api.internal())
                 },
                 script(name, callback, options) {
-                    DependencyTracker.addRunScript(name, new RunScript(callback, constants, name, options))
+                    DependencyTracker.addRunScript(name, new RunScript(callback, constants, name, offset, options))
                 }
             }
         }
@@ -142,7 +155,7 @@ export namespace ConfigManager {
             throw err
         }
 
-        return projectBuilder.build()
+        return createdResources
     }
 }
 

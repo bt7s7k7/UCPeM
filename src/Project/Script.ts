@@ -1,4 +1,5 @@
 import chalk from "chalk"
+import { join } from "path"
 import { PrepareScript } from "./PrepareScript"
 import { Project } from "./Project"
 
@@ -19,14 +20,15 @@ export class Script<T extends Function> {
             installName: rootProject.name,
             installPath: rootProject.path,
             isPort: rootProject != project,
-            projectName: project.name,
-            projectPath: project.path,
+            projectName: join(project.name, this.offset),
+            projectPath: join(project.path, this.offset),
         }
     }
 
     constructor(
         public readonly callback: T,
         public readonly constants: ConfigAPI.API["constants"],
-        public readonly name: string
+        public readonly name: string,
+        public readonly offset: string
     ) { }
 }

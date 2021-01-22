@@ -1,6 +1,9 @@
 import chalk from "chalk"
+import { readFileSync } from "fs"
 import { dirname, join } from "path"
+import { CONFIG_FILE_NAME } from "../global"
 import { executeCommand } from "../runner"
+import { UserError } from "../UserError"
 import { DependencyTracker } from "./DependencyTracker"
 import { link } from "./link"
 import { ProjectBuilder } from "./ProjectBuilder"
@@ -10,8 +13,17 @@ import { makeResourceID } from "./util"
 
 let anonId = 0
 
-export const ConfigManager = new class ConfigManager {
-    parseConfig(configText: string, path: string) {
+export namespace ConfigManager {
+    export function parseConfig(path: string) {
+        let configText: string
+        try {
+            configText = readFileSync(path).toString()
+        } catch (err) {
+            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file (${CONFIG_FILE_NAME}) in ${dirname(path)}`)
+            else throw err
+        }
+
+
         const dirPath = dirname(path)
         const script = `(__api) => {${configText.replace(`require("ucpem")`, "__api")}}`
 
@@ -132,6 +144,6 @@ export const ConfigManager = new class ConfigManager {
 
         return projectBuilder.build()
     }
-}()
+}
 
 

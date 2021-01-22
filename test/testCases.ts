@@ -3,6 +3,8 @@ import { supportsColor } from "chalk";
 import { lstatSync, statSync, writeFileSync } from "fs";
 import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI";
 
+const runnerSettings = () => ({ env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+
 export const cases: Record<string, TestCase> = {
     "Should return resource name": {
         structure: {
@@ -660,7 +662,7 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port", runnerSettings())
 
             try {
                 statSync(dir(".ucpem/port"))
@@ -702,8 +704,8 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
             await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem sync`, "./b/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./a/port", runnerSettings())
+            await run(`ucpem sync`, "./b/port", runnerSettings())
 
             try {
                 statSync(dir(".ucpem/port/dependency/app.js"))
@@ -739,9 +741,9 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port", runnerSettings())
+            await run(`ucpem sync with port`, "./project", runnerSettings())
+            await run(`ucpem install`, "./project", runnerSettings())
 
             try {
                 statSync(dir("./project/dependency"))
@@ -793,11 +795,11 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
             await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./a/port", runnerSettings())
 
-            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem unsync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem install remote`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync with port`, "./project", runnerSettings())
+            await run(`ucpem unsync with port`, "./project", runnerSettings())
+            await run(`ucpem install remote`, "./project", runnerSettings())
 
             try {
                 statSync(dir("./project/dependency/app.js"))
@@ -849,10 +851,10 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./a/port", { stdio: "ignore" })
             await run(`git add . && git commit -m "Initial commit"`, "./b/port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./a/port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./a/port", runnerSettings())
 
-            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem install`, "./project", runnerSettings())
+            await run(`ucpem sync with port`, "./project", runnerSettings())
 
             try {
                 statSync(dir("./project/dependency/index.js"))
@@ -887,9 +889,9 @@ export const cases: Record<string, TestCase> = {
             },
         },
         async callback() {
-            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem sync with port`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem update`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port", runnerSettings())
+            await run(`ucpem sync with port`, "./project", runnerSettings())
+            await run(`ucpem update`, "./project", runnerSettings())
 
             try {
                 statSync(dir("./project/dependency"))
@@ -941,12 +943,12 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port1", { stdio: "ignore" })
             await run(`git add . && git commit -m "Initial commit"`, "./port2", { stdio: "ignore" })
-            await run(`ucpem sync`, "./port1", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
-            await run(`ucpem sync`, "./port2", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port1", runnerSettings())
+            await run(`ucpem sync`, "./port2", runnerSettings())
 
-            await run(`ucpem install`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem install`, "./project", runnerSettings())
 
-            await run(`ucpem sync with all`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync with all`, "./project", runnerSettings())
 
             try {
                 statSync(dir("./project/dependency1"))
@@ -1049,9 +1051,9 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
-            await run(`ucpem sync`, "./port", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            await run(`ucpem sync`, "./port", runnerSettings())
 
-            const info = await run(`ucpem run /port+hello world`, "./project", { env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
+            const info = await run(`ucpem run /port+hello world`, "./project", runnerSettings())
 
             includes(info, "Hello world")
         }

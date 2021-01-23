@@ -1,4 +1,6 @@
-namespace ConfigAPI {
+import { Dirent } from "fs";
+
+export namespace ConfigAPI {
     export interface RunScriptOptions {
         argc?: number
         desc: string
@@ -57,6 +59,15 @@ namespace ConfigAPI {
         ucpem(command: string, cwd?: string): Promise<void>
         /** Includes a config file and returns the resources defined within */
         include(path: string): Record<string, Resource>
+
+        /** Apply each replacement to a string */
+        massReplace(text: string, replacements: [RegExp, string][]): string
+        /** Find all files in a folder recursively, optionally filtered by pattern */
+        find(path: string, pattern?: RegExp): AsyncGenerator<{ path: string, dirent: Dirent }>
+        /** Copy file / directory, optionally replace filename and content */
+        copy(source: string, target: string, replacements: [RegExp, string][]): Promise<void>
+        /** Creates directories for the path to exist */
+        ensureDirectory(path: string): void
 
         constants: {
             /** Path of the resource the callback is executed for */

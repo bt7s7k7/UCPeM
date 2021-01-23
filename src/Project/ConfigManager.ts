@@ -1,8 +1,10 @@
 import chalk from "chalk"
-import { readFileSync } from "fs"
-import { dirname, join, relative } from "path"
+import { copyFileSync, mkdirSync, readdir, readFileSync, writeFileSync } from "fs"
+import { dirname, extname, join, relative, resolve } from "path"
+import { promisify } from "util"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
+import { ConfigAPI } from "./ConfigAPI"
 import { DependencyTracker } from "./DependencyTracker"
 import { link } from "./link"
 import { ProjectBuilder } from "./ProjectBuilder"
@@ -106,6 +108,71 @@ export namespace ConfigLoader {
 
                 return loadConfigFile(target, dirname(target), projectBuilder)
             },
+            massReplace(text, replacements) {
+                replacements.forEach(([expr, replacement]) => {
+                    text = text.replace(expr, replacement)
+                })
+
+                return text
+            },
+            find: async function* (path, pattern) {
+                const dirents = await promisify(readdir)(path, { withFileTypes: true });
+                for (const dirent of dirents) {
+                    const res = resolve(path, dirent.name);
+
+                    if (!pattern || pattern.test(path)) {
+                        if (dirent.isDirectory()) {
+                            yield* this.find(res);
+                        } else {
+                            yield { path: res, dirent: dirent }
+                        }
+                    }
+                }
+            },
+            ensureDirectory(path) {
+                path = resolve(path)
+                const segments = path.split(/\/|\\/)
+
+                let currentPath = "/"
+
+                for (const segment of segments) {
+                    currentPath = join(currentPath, segment)
+                    let success = false
+                    try {
+                        mkdirSync(currentPath)
+                        success = true
+                    } catch (err) {
+                        if (err.code != "EEXIST") throw err
+                    }
+                    if (success) {
+                        console.log(`[${chalk.greenBright("+DIR")}] ${currentPath}`)
+                    }
+                }
+            },
+            async copy(source, target, replacements) {
+                console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
+                for await (const file of this.find(source)) {
+                    const offset = relative(source, file.path)
+                    if (!file.dirent.isDirectory()) {
+                        if (!replacements) {
+                            const targetPath = join(target, offset)
+                            console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
+                            this.ensureDirectory(dirname(targetPath))
+                            copyFileSync(file.path, targetPath)
+                        } else {
+                            const targetPath = this.massReplace(join(target, offset), replacements)
+                            console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
+                            this.ensureDirectory(dirname(targetPath))
+                            if (![".jpg", ".jpeg", ".ico", ".png"].includes(extname(targetPath))) {
+                                const source = readFileSync(file.path)
+                                writeFileSync(targetPath, this.massReplace(source.toString(), replacements))
+                            } else {
+                                copyFileSync(file.path, targetPath)
+                            }
+                        }
+                    }
+                }
+            },
             project: {
                 path: dirPath,
                 prefix(prefix) {
@@ -139,6 +206,8 @@ export namespace ConfigLoader {
                 }
             }
         }
+
+        Object.entries(api).filter(v => typeof v[1] == "function").forEach(([key, value]) => (api as any)[key] = (value as Function).bind(api))
 
         try {
             eval(script)(api)

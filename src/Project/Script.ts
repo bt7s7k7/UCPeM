@@ -1,5 +1,6 @@
 import chalk from "chalk"
 import { join } from "path"
+import { ConfigAPI } from "./ConfigAPI"
 import { PrepareScript } from "./PrepareScript"
 import { Project } from "./Project"
 

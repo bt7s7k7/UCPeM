@@ -1,4 +1,5 @@
 import { dirname, join } from "path"
+import { ConfigAPI } from "./ConfigAPI"
 import { PrepareScript } from "./PrepareScript"
 import { Resource } from "./Resource"
 

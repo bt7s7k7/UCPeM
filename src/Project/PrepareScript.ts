@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { ConfigAPI } from "./ConfigAPI";
 import { Project } from "./Project";
 import { Script } from "./Script";
 

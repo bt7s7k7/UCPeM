@@ -1,3 +1,4 @@
+import { ConfigAPI } from "./ConfigAPI";
 import { Script } from "./Script";
 
 export class RunScript extends Script<ConfigAPI.RunScriptCallback> {

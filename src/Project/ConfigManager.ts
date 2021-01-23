@@ -203,6 +203,9 @@ export namespace ConfigLoader {
                 },
                 script(name, callback, options) {
                     DependencyTracker.addRunScript(name, new RunScript(callback, constants, name, offset, options))
+                },
+                ref(name) {
+                    return makePort(projectBuilder.name).res(name)
                 }
             }
         }

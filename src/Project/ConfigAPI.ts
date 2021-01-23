@@ -16,6 +16,8 @@ export namespace ConfigAPI {
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
         use(dep: Dependency): void
         script(name: string, callback: RunScriptCallback, options: RunScriptOptions): void
+        /** Creates a reference to a resource defined the project */
+        ref(name: string): Dependency
     }
 
     export interface Port {

@@ -60,6 +60,9 @@ export namespace ConfigLoader {
 
         const api: ConfigAPI.API = {
             constants,
+            log(...msg) {
+                console.log(`[${chalk.cyanBright("SCRIPT")}]`, ...msg)
+            },
             git(path) {
                 const portName = DependencyTracker.addPort(path)
                 return makePort(portName)
@@ -98,10 +101,10 @@ export namespace ConfigLoader {
                 }
             },
             async run(command: string, cwd: string = dirPath) {
-                await executeCommand(command, cwd)
+                return await executeCommand(command, cwd)
             },
             async ucpem(command: string, cwd: string = dirPath) {
-                await executeCommand("node " + require.main?.filename + " " + command, cwd)
+                return await executeCommand("node " + require.main?.filename + " " + command, cwd)
             },
             include(path) {
                 const target = join(dirPath, path)
@@ -116,13 +119,13 @@ export namespace ConfigLoader {
                 return text
             },
             find: async function* (path, pattern) {
-                const dirents = await promisify(readdir)(path, { withFileTypes: true });
+                const dirents = await promisify(readdir)(path, { withFileTypes: true })
                 for (const dirent of dirents) {
-                    const res = resolve(path, dirent.name);
+                    const res = resolve(path, dirent.name)
 
                     if (!pattern || pattern.test(path)) {
                         if (dirent.isDirectory()) {
-                            yield* this.find(res);
+                            yield* this.find(res)
                         } else {
                             yield { path: res, dirent: dirent }
                         }

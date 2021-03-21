@@ -1,4 +1,4 @@
-import { Dirent } from "fs";
+import { Dirent } from "fs"
 
 export namespace ConfigAPI {
     export interface RunScriptOptions {
@@ -37,6 +37,8 @@ export namespace ConfigAPI {
     }
 
     export interface API {
+        log(...msg: any[]): void
+
         project: Project
         /** Imports a port from github */
         github(path: string): Port
@@ -56,9 +58,9 @@ export namespace ConfigAPI {
         /** Joins paths together */
         join(...paths: string[]): string
         /** Runs a command, cwd is resource path. Only available during callbacks */
-        run(command: string, cwd?: string): Promise<void>
+        run(command: string, cwd?: string): Promise<string>
         /** Runs an UCPeM command */
-        ucpem(command: string, cwd?: string): Promise<void>
+        ucpem(command: string, cwd?: string): Promise<string>
         /** Includes a config file and returns the resources defined within */
         include(path: string): Record<string, Resource>
 

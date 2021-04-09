@@ -166,6 +166,10 @@ export namespace ConfigLoader {
                             const targetPath = this.massReplace(join(target, offset), replacements)
                             console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
                             this.ensureDirectory(dirname(targetPath))
+                            if (targetPath.includes("__SKIP")) {
+                                console.log(`[${chalk.greenBright("COPY")}]   Skipping file`)
+                                continue
+                            }
                             if (![".jpg", ".jpeg", ".ico", ".png"].includes(extname(targetPath))) {
                                 const source = readFileSync(file.path)
                                 writeFileSync(targetPath, this.massReplace(source.toString(), replacements))

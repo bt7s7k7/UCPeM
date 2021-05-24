@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { appendFileSync, mkdirSync, readFileSync, statSync, writeFileSync } from "fs"
+import { appendFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
 import { CLI } from "./CLI"
+import { CopyUtil } from "./CopyUtil"
 import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
@@ -11,6 +12,7 @@ import { preparePrepare } from "./Install/prepare"
 import { update } from "./Install/update"
 import { LocalLinker } from "./LocalLinker"
 import { DependencyTracker } from "./Project/DependencyTracker"
+import { LinkHistory } from "./Project/link"
 import { Project } from "./Project/Project"
 import { runScript } from "./runScript"
 import { UserError } from "./UserError"
@@ -65,6 +67,37 @@ const cli = new CLI("ucpem <operation>", {
             await update()
             await install()
             await DependencyTracker.runPrepares()
+            await linkResources()
+        }
+    },
+    "link resolve": {
+        desc: "Changes links into real folders",
+        async callback() {
+            await linkResources()
+
+            for (const { source, target } of LinkHistory.history) {
+                try {
+                    unlinkSync(target)
+                    await CopyUtil.copy(source, target)
+                } catch (err) {
+                    if (err.code == "EISDIR") {
+                        console.log(chalk.yellow(`Resource "${target}" is a real folder already`))
+                    } else {
+                        throw err
+                    }
+                }
+            }
+        }
+    },
+    "link unresolve": {
+        desc: "Reverts changes made by `link resolve`",
+        async callback() {
+            await linkResources()
+
+            for (const { source, target } of LinkHistory.history) {
+                rmdirSync(target, { recursive: true })
+            }
+
             await linkResources()
         }
     },

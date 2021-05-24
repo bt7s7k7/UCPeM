@@ -1,7 +1,7 @@
 import chalk from "chalk"
-import { copyFileSync, mkdirSync, readdir, readFileSync, writeFileSync } from "fs"
-import { dirname, extname, join, relative, resolve } from "path"
-import { promisify } from "util"
+import { readFileSync } from "fs"
+import { dirname, join, relative } from "path"
+import { CopyUtil } from "../CopyUtil"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
 import { ConfigAPI } from "./ConfigAPI"
@@ -112,73 +112,14 @@ export namespace ConfigLoader {
                 return loadConfigFile(target, dirname(target), projectBuilder)
             },
             massReplace(text, replacements) {
-                replacements.forEach(([expr, replacement]) => {
-                    text = text.replace(expr, replacement)
-                })
-
-                return text
+                return CopyUtil.massReplace(text, replacements)
             },
-            find: async function* (path, pattern) {
-                const dirents = await promisify(readdir)(path, { withFileTypes: true })
-                for (const dirent of dirents) {
-                    const res = resolve(path, dirent.name)
-
-                    if (!pattern || pattern.test(path)) {
-                        if (dirent.isDirectory()) {
-                            yield* this.find(res)
-                        } else {
-                            yield { path: res, dirent: dirent }
-                        }
-                    }
-                }
-            },
+            find: (path, pattern) => CopyUtil.find(path, pattern),
             ensureDirectory(path) {
-                path = resolve(path)
-                const segments = path.split(/\/|\\/)
-
-                let currentPath = "/"
-
-                for (const segment of segments) {
-                    currentPath = join(currentPath, segment)
-                    let success = false
-                    try {
-                        mkdirSync(currentPath)
-                        success = true
-                    } catch (err) {
-                        if (err.code != "EEXIST") throw err
-                    }
-                    if (success) {
-                        console.log(`[${chalk.greenBright("+DIR")}] ${currentPath}`)
-                    }
-                }
+                CopyUtil.ensureDirectory(path)
             },
             async copy(source, target, replacements) {
-                console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
-                for await (const file of this.find(source)) {
-                    const offset = relative(source, file.path)
-                    if (!file.dirent.isDirectory()) {
-                        if (!replacements) {
-                            const targetPath = join(target, offset)
-                            console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
-                            this.ensureDirectory(dirname(targetPath))
-                            copyFileSync(file.path, targetPath)
-                        } else {
-                            const targetPath = this.massReplace(join(target, offset), replacements)
-                            console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
-                            this.ensureDirectory(dirname(targetPath))
-                            if (targetPath.includes("__SKIP")) {
-                                console.log(`[${chalk.greenBright("COPY")}]   Skipping file`)
-                                continue
-                            }
-                            if (![".jpg", ".jpeg", ".ico", ".png"].includes(extname(targetPath))) {
-                                const source = readFileSync(file.path)
-                                writeFileSync(targetPath, this.massReplace(source.toString(), replacements))
-                            } else {
-                                copyFileSync(file.path, targetPath)
-                            }
-                        }
-                    }
-                }
+                await CopyUtil.copy(source, target, replacements)
             },
             project: {
                 path: dirPath,

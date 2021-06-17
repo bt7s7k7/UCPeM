@@ -61,6 +61,15 @@ const cli = new CLI("ucpem <operation>", {
             await DependencyTracker.runPrepares()
         }
     },
+    "update all": {
+        desc: "Updates all installed ports, including local linked",
+        async callback() {
+            await update("include local ports")
+            await install()
+            await DependencyTracker.runPrepares()
+            await linkResources()
+        }
+    },
     update: {
         desc: "Updates all installed ports",
         async callback() {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { appendFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
 import { CLI } from "./CLI"
@@ -186,6 +186,14 @@ const cli = new CLI("ucpem <operation>", {
             await runScript(args)
         },
         argc: NaN
+    },
+    "add to bin": {
+        desc: `Copies self to "node_modules/.bin" so it can be used with yarn, use thins when doing a curl install, only use with single file builds`,
+        async callback() {
+            const self = process.argv[1]
+            copyFileSync(self, "node_modules/.bin/ucpem")
+            console.log("Done!")
+        }
     }
 })
 

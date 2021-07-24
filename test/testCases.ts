@@ -1,7 +1,7 @@
-import { fail } from "assert";
-import { supportsColor } from "chalk";
-import { lstatSync, statSync, writeFileSync } from "fs";
-import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI";
+import { fail } from "assert"
+import { supportsColor } from "chalk"
+import { lstatSync, statSync, writeFileSync } from "fs"
+import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI"
 
 const runnerSettings = () => ({ env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
 
@@ -1082,6 +1082,63 @@ export const cases: Record<string, TestCase> = {
         async callback() {
             includes(await run(`ucpem info`, ".", runnerSettings()), ".temp!resource")
             includes(await run(`ucpem prepare`, ".", runnerSettings()), `projectPath: '${dir("")}/package'`)
+        }
+    },
+    "Should be able to add dependencies to scripts": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.script("script", async () => {}, { desc: "", dependencies: [
+                        port.res("<SCRIPT>dependency")
+                    ]})
+                `
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.script("dependency", async () => {}, { desc: "" })
+                `
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+        }
+    },
+    "Should be able to use scripts from ports": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.use(port.res("<SCRIPT>dependency"))
+                `
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.script("dependency", async () => {
+                        console.log("__WORKS")
+                    }, { desc: "" })
+                `
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+            includes(await run(`ucpem run port+dependency`, "./project"), "__WORKS")
         }
     }
 }

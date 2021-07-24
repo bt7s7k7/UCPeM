@@ -1,13 +1,16 @@
-import chalk from "chalk";
-import { statSync } from "fs";
-import { basename, join } from "path";
-import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator";
-import { DependencyTracker } from "./DependencyTracker";
-import { link } from "./link";
-import { PrepareScript } from "./PrepareScript";
-import { Project } from "./Project";
+import chalk from "chalk"
+import { statSync } from "fs"
+import { basename, join } from "path"
+import { SCRIPT_RES_PREFIX } from "../global"
+import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator"
+import { DependencyTracker } from "./DependencyTracker"
+import { link } from "./link"
+import { PrepareScript } from "./PrepareScript"
+import { Project } from "./Project"
+import { parseResourceID } from "./util"
 
 export class Resource {
+    public readonly isScript = parseResourceID(this.id).resourceName.startsWith(SCRIPT_RES_PREFIX)
 
     logTree(prefix = "", postPrefix = "") {
         console.log(prefix + this.id + (this.internal ? " !!INT" : ""))
@@ -28,10 +31,12 @@ export class Resource {
     }
 
     public link(resource: Resource = this) {
+        if (this.isScript) return
+
         if (resource != this) {
-            const linkName = basename(this.path);
-            const linkDir = join(resource.path, "..");
-            const linkPath = join(linkDir, linkName);
+            const linkName = basename(this.path)
+            const linkDir = join(resource.path, "..")
+            const linkPath = join(linkDir, linkName)
             if (linkPath != this.path) {
                 link(this.path, linkPath)
                 GitIgnoreGenerator.addIgnore(linkDir, linkName)
@@ -52,14 +57,14 @@ export class Resource {
         public readonly prepare: PrepareScript | null,
         public readonly internal: boolean,
     ) {
-        if (!internal) {
+        if (!internal && !this.isScript) {
             try {
                 if (!statSync(path).isDirectory()) {
-                    throw new TypeError(`E185 Resource path ${this.path} does not point to a directory`)
+                    throw new TypeError(`E185 Resource path ${this.path} for resource ${this.id} does not point to a directory`)
                 }
             } catch (err) {
                 if ("code" in err && err.code == "ENOENT") {
-                    throw new TypeError(`E218 Resource path ${this.path} does not point to a directory, in fact the file does not exist`)
+                    throw new TypeError(`E218 Resource path ${this.path} for resource ${this.id} does not point to a directory, in fact the file does not exist`)
                 } else {
                     throw err
                 }

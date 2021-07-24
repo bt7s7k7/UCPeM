@@ -2,6 +2,7 @@ import chalk from "chalk"
 import { readFileSync } from "fs"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
+import { SCRIPT_RES_PREFIX } from "../global"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
 import { ConfigAPI } from "./ConfigAPI"
@@ -150,7 +151,8 @@ export namespace ConfigLoader {
                     this.res(name, dep, api.internal())
                 },
                 script(name, callback, options) {
-                    DependencyTracker.addRunScript(name, new RunScript(callback, constants, name, offset, options))
+                    DependencyTracker.addRunScript(projectBuilder.name, name, new RunScript(callback, constants, name, offset, options))
+                    return this.res(SCRIPT_RES_PREFIX + name, ...(options.dependencies ? options.dependencies : []))
                 },
                 ref(name) {
                     return makePort(projectBuilder.name).res(name)

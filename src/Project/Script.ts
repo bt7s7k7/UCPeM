@@ -29,7 +29,7 @@ export class Script<T extends Function> {
     constructor(
         public readonly callback: T,
         public readonly constants: ConfigAPI.API["constants"],
-        public readonly name: string,
+        public name: string,
         public readonly offset: string
     ) { }
 }

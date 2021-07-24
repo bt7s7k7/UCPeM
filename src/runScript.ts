@@ -123,13 +123,15 @@ export async function runScript(args: string[]) {
         }
     })()
 
+    if (!isProjectCreated) project.loadAllPorts()
+
     Debug.log("RUN", "Running from:", project.path)
 
     const runCli = new CLI("ucpem run <name>", Object.assign({}, ...Object.values(DependencyTracker.getRunScripts()).map(v => ({
         [v.name]: {
             desc: v.options.desc,
             async callback(args) {
-                await v.prepareRun(rootProject, project)(args);
+                await v.prepareRun(rootProject, project)(args)
             },
             argc: v.options.argc
         } as Command

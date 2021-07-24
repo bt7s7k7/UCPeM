@@ -152,14 +152,18 @@ export const DependencyTracker = new class DependencyTracker {
         }
     }
 
-    public addRunScript(name: string, script: RunScript) {
-        if (this.isInitProject) {
-            if (name in this.runScripts) {
-                throw new Error(`E060 Duplicate script registration for "${name}"`)
-            }
+    public addRunScript(project: string, name: string, script: RunScript) {
+        const prefix = this.isInitProject ? "" : project + "+"
+        name = prefix + name
+        script.name = name
 
-            this.runScripts[name] = script
+        Debug.log("DEP", `Adding run script`, { name, project, init: this.isInitProject })
+
+        if (name in this.runScripts) {
+            throw new Error(`E060 Duplicate script registration for "${name}"`)
         }
+
+        this.runScripts[name] = script
     }
 
     public getRunScripts() {

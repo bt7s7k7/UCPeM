@@ -1,11 +1,16 @@
-import { Debug } from "./Debug";
-import { UserError } from "./UserError";
+import { Debug } from "./Debug"
+import { UserError } from "./UserError"
 
 export interface Command {
     desc: string
     callback: (args: string[]) => Promise<void>
     name?: string,
     argc?: number
+}
+
+interface Fallback {
+    fallback: (args: string[]) => Promise<boolean>,
+    fallbackInfo: () => void
 }
 
 export class CLI {
@@ -22,7 +27,7 @@ export class CLI {
                 let debug = false
 
                 if (name[name.length - 1] == "+") {
-                    name = name.substring(0, name.length - 1);
+                    name = name.substring(0, name.length - 1)
                     debug = true
                 }
 
@@ -48,6 +53,10 @@ export class CLI {
         }
 
         if (command == null) {
+            if (this.fallback && await this.fallback.fallback(args)) {
+                return
+            }
+
             /** All command definitions, excluding the development ones (defined by "_" prefix) */
             const commandDefs = Object.entries(this.commands).map(v => (v[1].name = v[1].name ?? v[0], v[1])).filter(v => v.name![0] != "_")
             /** The length of the longest command (+1 for padding), so we can put all command descs at the same x pos */
@@ -58,6 +67,8 @@ export class CLI {
                 console.log(`  ${v.name}${" ".repeat(maxNameLength - v.name!.length)}- ${v.desc}`)
             })
 
+            if (this.fallback) this.fallback.fallbackInfo()
+
             process.exit(1)
         } else {
             // Call the callback of the specified command and handle errors
@@ -65,9 +76,14 @@ export class CLI {
         }
     }
 
+    protected fallback: Fallback | null = null
+
+    public setFallback(fallback: Fallback) {
+        this.fallback = fallback
+    }
+
     constructor(
         protected readonly usageCommand: string,
-        protected readonly commands: Record<string, Command>
-
+        protected readonly commands: Record<string, Command>,
     ) { }
 }

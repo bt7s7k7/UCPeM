@@ -3,6 +3,7 @@ import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join } from "path"
 import { inspect } from "util"
+import { AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
 import { CopyUtil } from "./CopyUtil"
 import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
@@ -193,6 +194,41 @@ const cli = new CLI("ucpem <operation>", {
             const self = process.argv[1]
             copyFileSync(self, "node_modules/.bin/ucpem")
             console.log("Done!")
+        }
+    },
+    alias: {
+        desc: "Create shorthand alias for a command :: Arguments: <name> <command...>",
+        argc: NaN,
+        async callback(args) {
+            const name = args.splice(0, 1)[0]
+            AliasManager.setAlias(name, args)
+            console.log(`Added alias ${name} => ${args.join(" ")}`)
+        }
+    },
+    unalias: {
+        desc: "Remove alias :: Arguments: <name>",
+        argc: 1,
+        async callback([name]) {
+            AliasManager.unsetAlias(name)
+            console.log(`Removed alias ${name}`)
+        }
+    }
+})
+
+cli.setFallback({
+    fallback: async (args) => {
+        const name = args.splice(0, 1)[0]
+        return AliasManager.runAlias(name, args)
+    },
+    fallbackInfo: () => {
+        const aliasMap = AliasManager.loadAliasMap()
+        const aliases = Object.entries(aliasMap)
+        if (aliases.length == 0) return
+
+        console.log("")
+        console.log("Aliases:")
+        for (const [alias, command] of aliases) {
+            console.log(`  ${alias} => ${command.join(" ")}`)
         }
     }
 })

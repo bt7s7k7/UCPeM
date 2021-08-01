@@ -3,7 +3,7 @@ import { Dirent } from "fs"
 export namespace ConfigAPI {
     export interface RunScriptOptions {
         argc?: number
-        dependencies: Dependency[]
+        dependencies?: Dependency[]
         desc: string
     }
 

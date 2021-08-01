@@ -150,7 +150,7 @@ export namespace ConfigLoader {
                     const name = `__${anonId++}`
                     this.res(name, dep, api.internal())
                 },
-                script(name, callback, options) {
+                script(name, callback, options = { desc: "-no description provided-" }) {
                     DependencyTracker.addRunScript(projectBuilder.name, name, new RunScript(callback, constants, name, offset, options))
                     return this.res(SCRIPT_RES_PREFIX + name, ...(options.dependencies ? options.dependencies : []))
                 },

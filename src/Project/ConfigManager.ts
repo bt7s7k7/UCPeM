@@ -1,5 +1,6 @@
 import chalk from "chalk"
 import { readFileSync } from "fs"
+import { createRequire } from "module"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
 import { SCRIPT_RES_PREFIX } from "../global"
@@ -35,7 +36,13 @@ export namespace ConfigLoader {
             if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
             else throw err
         }
-        const script = `(__api) => {${configText.replace(`require("ucpem")`, "__api")}}`
+        const scriptRequireBase = createRequire(path)
+        const scriptRequire = (id: string) => {
+            if (id == "ucpem") return api
+            else return scriptRequireBase(id)
+        }
+
+        const script = new Function("require", configText) as (require: typeof scriptRequire) => void
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -163,7 +170,7 @@ export namespace ConfigLoader {
         Object.entries(api).filter(v => typeof v[1] == "function").forEach(([key, value]) => (api as any)[key] = (value as Function).bind(api))
 
         try {
-            eval(script)(api)
+            script(scriptRequire)
         } catch (err) {
             if ("stack" in err) {
                 const prefix = `[${chalk.redBright("ERR")}] Error during running config script for "${projectBuilder.name}" :: ${path}` + "\n"

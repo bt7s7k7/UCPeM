@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { readFileSync } from "fs"
+import { existsSync, readFileSync } from "fs"
 import { createRequire } from "module"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
@@ -37,12 +37,30 @@ export namespace ConfigLoader {
             else throw err
         }
         const scriptRequireBase = createRequire(path)
-        const scriptRequire = (id: string) => {
+        const scriptRequire = (id: string, options: { rewrite?: boolean } = {}) => {
             if (id == "ucpem") return api
-            else return scriptRequireBase(id)
+
+            if (options.rewrite) {
+                const src = id.lastIndexOf("/src/")
+                if (src == -1) throw new Error(`Tried to do require rewrite, but module id does not contain "/src/"`)
+                const target = join(dirPath, id) + ".ts"
+                if (!existsSync(target)) throw new Error(`Tried to do require rewrite but target module does not exist (${target})`)
+                const newID = id.slice(0, src) + "/build/" + id.slice(src + 5)
+                const newTarget = join(dirPath, newID) + ".js"
+
+                if (!existsSync(newTarget)) throw new Error(`Tried to do require rewrite but build file not found (${newTarget})`)
+
+                return scriptRequireBase(newID)
+            }
+
+            return scriptRequireBase(id)
         }
 
-        const script = new Function("require", configText) as (require: typeof scriptRequire) => void
+        const scriptSource = configText
+            .replace(/\/\*\s*@REWRITE\s*\*\//g, ", { rewrite: true }")
+            + "\n//# sourceURL=file://" + path
+
+        const script = eval(`(require) => {${scriptSource + "\n"}}`) as (require: typeof scriptRequire) => void
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -52,7 +70,6 @@ export namespace ConfigLoader {
             projectPath: "",
             resourcePath: ""
         }
-
 
         const makePort = (portName: string): ConfigAPI.Port => {
             return {

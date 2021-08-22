@@ -22,7 +22,7 @@ export class Script<T extends Function> {
             installPath: rootProject.path,
             isPort: rootProject != project,
             projectName: join(project.name, this.offset),
-            projectPath: join(project.path, this.offset),
+            projectPath: join(project.path, this.offset)
         }
     }
 

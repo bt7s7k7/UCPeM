@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "fs"
 import { createRequire } from "module"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
-import { SCRIPT_RES_PREFIX } from "../global"
+import { PORT_FOLDER_NAME, SCRIPT_RES_PREFIX } from "../global"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
 import { ConfigAPI } from "./ConfigAPI"
@@ -71,12 +71,25 @@ export namespace ConfigLoader {
             resourcePath: ""
         }
 
+        function makeScriptRef(base: string | ConfigAPI.Dependency, path: string, name: string): ConfigAPI.ScriptRef {
+            return {
+                name, path,
+                ...(typeof base == "string" ? { id: makeResourceID(base, SCRIPT_RES_PREFIX + name) } : base),
+                async run(args = "", cwd) {
+                    return api.ucpem(`run ${path}+${name} ${args}`, cwd)
+                }
+            }
+        }
+
         const makePort = (portName: string): ConfigAPI.Port => {
             return {
                 res(resourceName) {
                     return {
                         id: makeResourceID(portName, resourceName)
                     }
+                },
+                script(name) {
+                    return makeScriptRef(portName, join(dirPath, PORT_FOLDER_NAME, portName), name)
                 }
             }
         }
@@ -176,7 +189,8 @@ export namespace ConfigLoader {
                 },
                 script(name, callback, options = { desc: "-no description provided-" }) {
                     DependencyTracker.addRunScript(projectBuilder.name, name, new RunScript(callback, constants, name, offset, options))
-                    return this.res(SCRIPT_RES_PREFIX + name, ...(options.dependencies ? options.dependencies : []))
+                    const resource = this.res(SCRIPT_RES_PREFIX + name, ...(options.dependencies ? options.dependencies : []))
+                    return makeScriptRef(resource, dirPath, name)
                 },
                 ref(name) {
                     return makePort(projectBuilder.name).res(name)

@@ -10,18 +10,25 @@ export namespace ConfigAPI {
         (args: string[]): Promise<void>
     }
 
+    export interface ScriptRef extends Dependency {
+        path: string
+        name: string
+        run(args?: string, cwd?: string): Promise<string>
+    }
+
     export interface Project {
         prefix(path: string): Project
         path: string
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
         use(dep: Dependency): void
-        script(name: string, callback: RunScriptCallback, options?: RunScriptOptions): void
+        script(name: string, callback: RunScriptCallback, options?: RunScriptOptions): ScriptRef
         /** Creates a reference to a resource defined the project */
         ref(name: string): Dependency
     }
 
     export interface Port {
         res(name: string): Dependency
+        script(name: string): ScriptRef
     }
 
     export interface Dependency {

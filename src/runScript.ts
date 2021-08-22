@@ -48,6 +48,8 @@ export async function runScript(args: string[]) {
                         source = GITHUB_PREFIX + source.substr(1)
                     }
 
+                    if (source == rootProject.path) return rootProject
+
                     const sourceName = parseNameFromPath(source)
                     Debug.log("RUN", "Starting search for", sourceName)
 

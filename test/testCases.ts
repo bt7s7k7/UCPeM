@@ -1121,7 +1121,7 @@ export const cases: Record<string, TestCase> = {
 
                     const port = git("../port")
 
-                    project.use(port.res("<SCRIPT>dependency"))
+                    project.use(port.script("dependency"))
                 `
             },
             "port": {
@@ -1139,6 +1139,47 @@ export const cases: Record<string, TestCase> = {
             await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
             includes(await run(`ucpem run port+dependency`, "./project"), "__WORKS")
+        }
+    },
+    "Should be able to run script from ScriptRef": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+                    const dependency = port.script("dependency")
+
+                    project.script("run-dependency", async () => {
+                        await dependency.run()
+                    }, { dependencies: [ dependency ] })
+
+                    const selfRun = project.script("self", async ([name]) => {
+                        console.log(name)
+                    }, { argc: 1 })
+
+                    project.script("run-self", async () => {
+                        await selfRun.run("__WORKS_2")
+                    })
+                `
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.script("dependency", async () => {
+                        console.log("__WORKS")
+                    }, { desc: "" })
+                `
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+            includes(await run(`ucpem run run-dependency`, "./project"), "__WORKS")
+            includes(await run(`ucpem run run-self`, "./project"), "__WORKS_2")
         }
     }
 }

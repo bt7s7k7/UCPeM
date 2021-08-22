@@ -1,11 +1,10 @@
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { readFileSync, writeFileSync } from "fs"
+import { join } from "path"
 
 const inputLines = readFileSync(join(__dirname, "../src/Project/ConfigAPI.ts")).toString().split("\n")
 const outputLines = [
     `declare module "ucpem" {`,
-    `import { Dirent } from "fs"`,
-    ...inputLines.slice(3, inputLines.length - 1),
+    ...inputLines.slice(2, inputLines.length - 1),
     `export = api as API`,
     `}`
 ]

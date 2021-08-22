@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { copyFileSync, Dirent, mkdirSync, readdir, readFileSync, writeFileSync } from "fs"
+import { copyFileSync, mkdirSync, readdir, readFileSync, writeFileSync } from "fs"
 import { dirname, extname, join, relative, resolve } from "path"
 import { promisify } from "util"
 
@@ -12,8 +12,13 @@ export namespace CopyUtil {
         return text
     }
 
-    export async function* find(path: string, pattern?: RegExp | undefined): AsyncGenerator<{ path: string, dirent: Dirent }> {
-        const dirents = await promisify(readdir)(path, { withFileTypes: true })
+    export async function* find(path: string, pattern?: RegExp | undefined): AsyncGenerator<{ path: string, isDirectory: boolean }> {
+        const dirents = await promisify(readdir)(path, { withFileTypes: true }).catch(err => { if (err.code == "ENOTDIR") { return false } else throw err })
+        if (typeof dirents == "boolean") {
+            if (!pattern || pattern.test(path)) yield { path, isDirectory: false }
+            return
+        }
+
         for (const dirent of dirents) {
             const res = resolve(path, dirent.name)
 
@@ -21,7 +26,7 @@ export namespace CopyUtil {
                 if (dirent.isDirectory()) {
                     yield* find(res)
                 } else {
-                    yield { path: res, dirent: dirent }
+                    yield { path: res, isDirectory: dirent.isDirectory() }
                 }
             }
         }
@@ -52,7 +57,7 @@ export namespace CopyUtil {
         console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
         for await (const file of find(source)) {
             const offset = relative(source, file.path)
-            if (!file.dirent.isDirectory()) {
+            if (!file.isDirectory) {
                 if (!replacements) {
                     const targetPath = join(target, offset)
                     console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)

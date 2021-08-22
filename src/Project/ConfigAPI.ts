@@ -1,10 +1,9 @@
-import { Dirent } from "fs"
 
 export namespace ConfigAPI {
     export interface RunScriptOptions {
         argc?: number
         dependencies?: Dependency[]
-        desc: string
+        desc?: string
     }
 
     export interface RunScriptCallback {
@@ -16,7 +15,7 @@ export namespace ConfigAPI {
         path: string
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
         use(dep: Dependency): void
-        script(name: string, callback: RunScriptCallback, options: RunScriptOptions): void
+        script(name: string, callback: RunScriptCallback, options?: RunScriptOptions): void
         /** Creates a reference to a resource defined the project */
         ref(name: string): Dependency
     }
@@ -68,7 +67,7 @@ export namespace ConfigAPI {
         /** Apply each replacement to a string */
         massReplace(text: string, replacements: [RegExp, string][]): string
         /** Find all files in a folder recursively, optionally filtered by pattern */
-        find(path: string, pattern?: RegExp): AsyncGenerator<{ path: string, dirent: Dirent }>
+        find(path: string, pattern?: RegExp): AsyncGenerator<{ path: string, isDirectory: boolean }>
         /** Copy file / directory, optionally replace filename and content */
         copy(source: string, target: string, replacements?: [RegExp, string][]): Promise<void>
         /** Creates directories for the path to exist */

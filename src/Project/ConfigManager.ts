@@ -3,12 +3,13 @@ import { existsSync, readFileSync } from "fs"
 import { createRequire } from "module"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
-import { PORT_FOLDER_NAME, SCRIPT_RES_PREFIX } from "../global"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, SCRIPT_RES_PREFIX } from "../global"
 import { executeCommand } from "../runner"
 import { UserError } from "../UserError"
 import { ConfigAPI } from "./ConfigAPI"
 import { DependencyTracker } from "./DependencyTracker"
 import { link } from "./link"
+import { Project } from "./Project"
 import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
 import { RunScript } from "./RunScript"
@@ -16,17 +17,34 @@ import { makeResourceID } from "./util"
 
 let anonId = 0
 
+class OrphanedConfigError extends Error { }
+
+function findMainConfig(path: string) {
+    while (path != dirname(path)) {
+        path = dirname(path)
+        const configFilePath = join(path, CONFIG_FILE_NAME)
+        if (existsSync(configFilePath)) {
+            return ConfigLoader.parseConfig(configFilePath)
+        }
+    }
+
+    throw new UserError("E061 Cannot find parent of orphaned config file")
+}
+
 export namespace ConfigLoader {
-    export function parseConfig(path: string) {
+    export function parseConfig(path: string): Project {
         const dirPath = dirname(path)
         const projectBuilder = new ProjectBuilder(dirPath)
 
-        loadConfigFile(path, dirPath, projectBuilder)
+        const ret = loadConfigFile(path, dirPath, projectBuilder, "normal")
+        if (ret == "orphaned") {
+            return findMainConfig(dirPath)
+        }
 
         return projectBuilder.build()
     }
 
-    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder) {
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
         const offset = relative(projectBuilder.path, dirPath)
 
         let configText: string
@@ -147,7 +165,9 @@ export namespace ConfigLoader {
             include(path) {
                 const target = join(dirPath, path)
 
-                return loadConfigFile(target, dirname(target), projectBuilder)
+                const ret = loadConfigFile(target, dirname(target), projectBuilder, "child")
+                if (ret == "orphaned") throw new Error("Child config file was orphaned, this should not be possible")
+                return ret
             },
             massReplace(text, replacements) {
                 return CopyUtil.massReplace(text, replacements)
@@ -194,6 +214,9 @@ export namespace ConfigLoader {
                 },
                 ref(name) {
                     return makePort(projectBuilder.name).res(name)
+                },
+                isChild() {
+                    if (configType == "normal") throw new OrphanedConfigError()
                 }
             }
         }
@@ -203,20 +226,11 @@ export namespace ConfigLoader {
         try {
             script(scriptRequire)
         } catch (err) {
-            if ("stack" in err) {
-                const prefix = `[${chalk.redBright("ERR")}] Error during running config script for "${projectBuilder.name}" :: ${path}` + "\n"
-                err.stack = prefix + (err.stack as string)
-                    .replace(/<anonymous>:/g, path + ":")
-                    .replace(/eval at .*, /g, "")
-                    .replace(/at eval \(eval at parseConfig.*\n/g, (s) => chalk.cyanBright(s))
+            if (err instanceof OrphanedConfigError) return "orphaned"
 
-                err.message = prefix + err.message
-            }
             throw err
         }
 
         return createdResources
     }
 }
-
-

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
-import { join } from "path"
+import { join, relative } from "path"
 import { inspect } from "util"
 import { AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
@@ -86,6 +86,8 @@ const cli = new CLI("ucpem <operation>", {
             await linkResources()
 
             for (const { source, target } of LinkHistory.history) {
+                if (relative(process.cwd(), target).startsWith("..")) continue
+
                 try {
                     unlinkSync(target)
                     await CopyUtil.copy(source, target)
@@ -105,6 +107,8 @@ const cli = new CLI("ucpem <operation>", {
             await linkResources()
 
             for (const { source, target } of LinkHistory.history) {
+                if (relative(process.cwd(), target).startsWith("..")) continue
+
                 rmdirSync(target, { recursive: true })
             }
 

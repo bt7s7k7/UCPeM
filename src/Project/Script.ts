@@ -19,7 +19,7 @@ export class Script<T extends Function> {
     protected getConstantsValues(rootProject: Project, project: Project): Partial<PrepareScript["constants"]> {
         return {
             installName: rootProject.name,
-            installPath: rootProject.path,
+            installPath: process.cwd(),
             isPort: rootProject != project,
             projectName: join(project.name, this.offset),
             projectPath: join(project.path, this.offset)

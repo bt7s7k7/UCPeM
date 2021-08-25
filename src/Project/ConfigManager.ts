@@ -78,7 +78,7 @@ export namespace ConfigLoader {
             .replace(/\/\*\s*@REWRITE\s*\*\//g, ", { rewrite: true }")
             + "\n//# sourceURL=file://" + path
 
-        const script = eval(`(require) => {${scriptSource + "\n"}}`) as (require: typeof scriptRequire) => void
+        const script = eval(`(require, __dirname) => {${scriptSource + "\n"}}`) as (require: typeof scriptRequire, __dirname: string) => void
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -224,7 +224,7 @@ export namespace ConfigLoader {
         Object.entries(api).filter(v => typeof v[1] == "function").forEach(([key, value]) => (api as any)[key] = (value as Function).bind(api))
 
         try {
-            script(scriptRequire)
+            script(scriptRequire, dirPath)
         } catch (err) {
             if (err instanceof OrphanedConfigError) return "orphaned"
 

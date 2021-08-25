@@ -1,18 +1,18 @@
-import { mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs";
-import { basename, join } from "path";
-import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global";
-import { ConfigLoader } from "./ConfigManager";
-import { DependencyTracker } from "./DependencyTracker";
-import { Resource } from "./Resource";
+import { mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs"
+import { basename, join } from "path"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global"
+import { ConfigLoader } from "./ConfigManager"
+import { DependencyTracker } from "./DependencyTracker"
+import { Resource } from "./Resource"
 
 export class Project {
     public readonly resourceList = [] as Resource[]
     public readonly portFolderPath = join(this.path, PORT_FOLDER_NAME);
 
-    public logTree(prefix = "") {
+    public logTree(shallow: boolean | "shallow" = false) {
         this.resourceList.forEach(resource => {
-            resource.logTree()
-            console.log()
+            resource.logTree(undefined, undefined, shallow)
+            if (!shallow) console.log()
         })
     }
 

@@ -37,8 +37,13 @@ const cli = new CLI("ucpem <operation>", {
             project.logTree()
             DependencyTracker.logPorts()
             DependencyTracker.logMissing()
-
-            //console.log(inspect(project, true, 50, true))
+        }
+    },
+    "info brief": {
+        desc: "Displays all project resources",
+        async callback() {
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            project.logTree("shallow")
         }
     },
     install: {

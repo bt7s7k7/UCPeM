@@ -12,9 +12,9 @@ import { parseResourceID } from "./util"
 export class Resource {
     public readonly isScript = parseResourceID(this.id).resourceName.startsWith(SCRIPT_RES_PREFIX)
 
-    logTree(prefix = "", postPrefix = "") {
+    logTree(prefix = "", postPrefix = "", shallow: boolean | "shallow" = false) {
         console.log(prefix + this.id + (this.internal ? " !!INT" : ""))
-        this.dependencies.forEach((dependency, index, { length }) => {
+        if (!shallow) this.dependencies.forEach((dependency, index, { length }) => {
             const depResource = DependencyTracker.resolveResource(dependency)
             const last = index == length - 1
             const lPrefix = postPrefix + (last ? "└─" : "├─") + " "

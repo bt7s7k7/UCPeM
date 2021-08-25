@@ -3,6 +3,11 @@ import { copyFileSync, mkdirSync, readdir, readFileSync, writeFileSync } from "f
 import { dirname, extname, join, relative, resolve } from "path"
 import { promisify } from "util"
 
+interface CopyOptions {
+    quiet?: boolean
+    replacements?: [RegExp, string][]
+}
+
 export namespace CopyUtil {
     export function massReplace(text: string, replacements: [RegExp, string][]): string {
         replacements.forEach(([expr, replacement]) => {
@@ -32,7 +37,7 @@ export namespace CopyUtil {
         }
     }
 
-    export function ensureDirectory(path: string) {
+    export function ensureDirectory(path: string, options: { quiet?: boolean } = {}) {
         path = resolve(path)
         const segments = path.split(/\/|\\/)
 
@@ -47,33 +52,34 @@ export namespace CopyUtil {
             } catch (err) {
                 if (err.code != "EEXIST") throw err
             }
-            if (success) {
+            if (success && !options.quiet) {
                 console.log(`[${chalk.greenBright("+DIR")}] ${currentPath}`)
             }
         }
     }
 
-    export async function copy(source: string, target: string, replacements?: [RegExp, string][]) {
-        console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
+    export async function copy(source: string, target: string, options: CopyOptions | CopyOptions["replacements"] = {}) {
+        options = options instanceof Array ? { replacements: options } : options
+        if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
         for await (const file of find(source)) {
             const offset = relative(source, file.path)
             if (!file.isDirectory) {
-                if (!replacements) {
+                if (!options.replacements) {
                     const targetPath = join(target, offset)
-                    console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
-                    ensureDirectory(dirname(targetPath))
+                    if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
+                    ensureDirectory(dirname(targetPath), options)
                     copyFileSync(file.path, targetPath)
                 } else {
-                    const targetPath = massReplace(join(target, offset), replacements)
-                    console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
-                    ensureDirectory(dirname(targetPath))
+                    const targetPath = massReplace(join(target, offset), options.replacements)
+                    if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
+                    ensureDirectory(dirname(targetPath), options)
                     if (targetPath.includes("__SKIP")) {
-                        console.log(`[${chalk.greenBright("COPY")}]   Skipping file`)
+                        if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}]   Skipping file`)
                         continue
                     }
                     if (![".jpg", ".jpeg", ".ico", ".png"].includes(extname(targetPath))) {
                         const source = readFileSync(file.path)
-                        writeFileSync(targetPath, massReplace(source.toString(), replacements))
+                        writeFileSync(targetPath, massReplace(source.toString(), options.replacements))
                     } else {
                         copyFileSync(file.path, targetPath)
                     }

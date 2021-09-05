@@ -27,7 +27,7 @@ export namespace CopyUtil {
         for (const dirent of dirents) {
             const res = resolve(path, dirent.name)
 
-            if (!pattern || pattern.test(path)) {
+            if (!pattern || pattern.test(res)) {
                 if (dirent.isDirectory()) {
                     yield* find(res)
                 } else {

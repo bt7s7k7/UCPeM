@@ -1,16 +1,16 @@
-import chalk from "chalk";
-import { join } from "path";
-import { performance } from "perf_hooks";
-import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global";
-import { LocalLinker } from "../LocalLinker";
-import { LocalPortsScout } from "../LocalPortsScout";
-import { DependencyTracker } from "../Project/DependencyTracker";
-import { Project } from "../Project/Project";
-import { processClonePath } from "../Project/util";
-import { executeCommand } from "../runner";
-import { UserError } from "../UserError";
+import chalk from "chalk"
+import { join } from "path"
+import { performance } from "perf_hooks"
+import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global"
+import { LocalLinker } from "../LocalLinker"
+import { LocalPortsScout } from "../LocalPortsScout"
+import { DependencyTracker } from "../Project/DependencyTracker"
+import { Project } from "../Project/Project"
+import { processClonePath } from "../Project/util"
+import { executeCommand } from "../runner"
+import { UserError } from "../UserError"
 
-export async function install(remoteOnly = false) {
+export async function install(type: "default" | "remote" | "local" = "default") {
     const start = performance.now()
     const availablePorts = LocalPortsScout.getAllAvailablePorts()
 
@@ -25,12 +25,15 @@ export async function install(remoteOnly = false) {
         const missingPorts = DependencyTracker.getMissingPorts()
         if (missingPorts.length > 0) {
             for (let { name, path } of missingPorts) {
-                if (!remoteOnly && availablePorts.find(v => v.name == name)) {
+                if (type != "remote" && availablePorts.find(v => v.name == name)) {
                     console.log(chalk.yellow(`Using local copy of port "${name}"...`))
                     localLinker.syncWith(name, false)
                 } else {
                     const clonePath = join(portFolderPath, name)
                     path = processClonePath(path)
+                    if (type == "local") {
+                        throw new UserError(`E176 Cannot find local copy of port ${name} (${path})`)
+                    }
                     await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
                     Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
                     await DependencyTracker.runPrepares(name)

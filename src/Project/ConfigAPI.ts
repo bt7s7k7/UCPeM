@@ -25,7 +25,7 @@ export namespace ConfigAPI {
         prefix(path: string): Project
         path: string
         res(name: string, ...inp: (Modifier | Dependency)[]): Resource
-        use(dep: Dependency): void
+        use(...dep: Dependency[]): void
         script(name: string, callback: RunScriptCallback, options?: RunScriptOptions): ScriptRef
         /** Creates a reference to a resource defined the project */
         ref(name: string): Dependency

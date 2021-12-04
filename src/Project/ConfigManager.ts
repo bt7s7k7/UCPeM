@@ -203,9 +203,9 @@ export namespace ConfigLoader {
                     createdResources[id] = createdResource
                     return createdResource
                 },
-                use(dep) {
+                use(...dep) {
                     const name = `__${anonId++}`
-                    this.res(name, dep, api.internal())
+                    this.res(name, ...dep, api.internal())
                 },
                 script(name, callback, options = { desc: "-no description provided-" }) {
                     DependencyTracker.addRunScript(projectBuilder.name, name, new RunScript(callback, constants, name, offset, options))

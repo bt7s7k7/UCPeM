@@ -1,4 +1,4 @@
-import { mkdirSync, readdirSync, rmdirSync } from "fs"
+import { mkdirSync, readdirSync, rmSync } from "fs"
 import { join } from "path"
 import { CLI, Command } from "./CLI"
 import { Debug } from "./Debug"
@@ -143,6 +143,6 @@ export async function runScript(args: string[]) {
 
     if (isProjectCreated) {
         console.log("\nCleaning up cloned project...")
-        rmdirSync(project.path, { recursive: true })
+        rmSync(project.path, { recursive: true })
     }
 }

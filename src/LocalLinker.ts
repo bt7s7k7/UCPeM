@@ -1,4 +1,4 @@
-import { lstatSync, mkdirSync, readdirSync, rmdirSync, statSync, unlinkSync } from "fs"
+import { lstatSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "fs"
 import { join } from "path"
 import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH } from "./global"
 import { LocalPortsScout } from "./LocalPortsScout"
@@ -61,7 +61,7 @@ export class LocalLinker {
         const linkTarget = this.getLocalPathFor(name)
 
         try {
-            rmdirSync(linkTarget, { recursive: true })
+            rmSync(linkTarget, { recursive: true })
             console.log(`A project with name "${name}" was already imported, deleting...`)
         } catch (err) {
             if (err.code != "ENOENT") throw err

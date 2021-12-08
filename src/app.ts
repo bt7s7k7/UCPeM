@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import chalk from "chalk"
-import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from "fs"
+import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join, relative } from "path"
 import { inspect } from "util"
 import { AliasManager } from "./AliasManager"
@@ -121,7 +121,7 @@ const cli = new CLI("ucpem <operation>", {
             for (const { source, target } of LinkHistory.history) {
                 if (relative(process.cwd(), target).startsWith("..")) continue
 
-                rmdirSync(target, { recursive: true })
+                rmSync(target, { recursive: true })
             }
 
             await linkResources()

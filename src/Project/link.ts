@@ -1,6 +1,7 @@
 import chalk from "chalk"
 import { symlinkSync } from "fs"
 import { relative } from "path"
+import { state } from "../global"
 import { DependencyTracker } from "./DependencyTracker"
 
 export function link(source: string, target: string, sourceGlobal = false, targetGlobal = false) {
@@ -8,7 +9,12 @@ export function link(source: string, target: string, sourceGlobal = false, targe
     const sourcePath = sourceGlobal ? source : "./" + relative(projectRoot, source)
     const targetPath = targetGlobal ? target : "./" + relative(projectRoot, target)
 
-    console.log(`[${chalk.cyanBright("LINK")}] Linking ${sourcePath} → ${targetPath}`)
+    const message = `[${chalk.cyanBright("LINK")}] Linking ${sourcePath} → ${targetPath}`
+    if (state.compact) {
+        process.stdout.write("\r\u001b[A\u001b[K" + message + "\r\n")
+    } else {
+        console.log(message)
+    }
 
     LinkHistory.push({ source, target })
 
@@ -16,7 +22,7 @@ export function link(source: string, target: string, sourceGlobal = false, targe
         symlinkSync(source, target, "junction")
     } catch (err) {
         if (err.code == "EEXIST") {
-            console.log(`    └─ File already exists`)
+            if (!state.compact) console.log(`    └─ File already exists`)
         } else {
             throw err
         }

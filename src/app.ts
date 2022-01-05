@@ -6,7 +6,7 @@ import { inspect } from "util"
 import { AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
 import { CopyUtil } from "./CopyUtil"
-import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME, state } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
@@ -95,6 +95,7 @@ const cli = new CLI("ucpem <operation>", {
     "link resolve": {
         desc: "Changes links into real folders",
         async callback() {
+            state.compact = true
             await linkResources()
 
             for (const { source, target } of LinkHistory.history) {
@@ -105,7 +106,7 @@ const cli = new CLI("ucpem <operation>", {
                     await CopyUtil.copy(source, target)
                 } catch (err) {
                     if (err.code == "EISDIR") {
-                        console.log(chalk.yellow(`Resource "${target}" is a real folder already`))
+                        // Real folder already, skipping
                     } else {
                         throw err
                     }
@@ -116,6 +117,7 @@ const cli = new CLI("ucpem <operation>", {
     "link unresolve": {
         desc: "Reverts changes made by `link resolve`",
         async callback() {
+            state.compact = true
             await linkResources()
 
             for (const { source, target } of LinkHistory.history) {

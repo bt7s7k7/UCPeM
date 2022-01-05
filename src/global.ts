@@ -12,5 +12,6 @@ export const SCRIPT_RES_PREFIX = "<SCRIPT>"
 export const LOCAL_PORTS_PATH = process.env.UCPEM_LOCAL_PORTS ?? join(homedir(), ".ucpem")
 
 export var state = {
-    debug: false
+    debug: false,
+    compact: false
 }

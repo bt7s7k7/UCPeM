@@ -123,7 +123,13 @@ const cli = new CLI("ucpem <operation>", {
             for (const { source, target } of LinkHistory.history) {
                 if (relative(process.cwd(), target).startsWith("..")) continue
 
-                rmSync(target, { recursive: true })
+                try {
+                    rmSync(target, { recursive: true })
+                } catch (err) {
+                    if (err.code == "ENOENT") {
+                        // Already deleted skipping
+                    } else throw err
+                }
             }
 
             await linkResources()

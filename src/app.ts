@@ -114,6 +114,24 @@ const cli = new CLI("ucpem <operation>", {
             }
         }
     },
+    "link clean": {
+        desc: "Deletes all created links",
+        async callback() {
+            state.compact = true
+            await linkResources()
+
+            for (const { source, target } of LinkHistory.history) {
+                if (relative(process.cwd(), target).startsWith("..")) continue
+                try {
+                    unlinkSync(target)
+                } catch (err) {
+                    if (err.code == "ENOENT") {
+                        // We already did this one, skip
+                    } else throw err
+                }
+            }
+        },
+    },
     "link unresolve": {
         desc: "Reverts changes made by `link resolve`",
         async callback() {

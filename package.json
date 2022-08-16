@@ -29,7 +29,8 @@
     "homepage": "https://github.com/bt7s7k7/UCPeM#readme",
     "dependencies": {
         "@types/node": "^16.11.12",
-        "chalk": "^4.1.0"
+        "chalk": "^4.1.0",
+        "source-map-support": "^0.5.21"
     },
     "devDependencies": {
         "@types/glob": "^7.1.3",

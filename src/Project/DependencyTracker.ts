@@ -15,6 +15,7 @@ export const DependencyTracker = new class DependencyTracker {
     protected rootProject = null as Project | null
     protected ignoredResources = {} as Record<string, Resource>
     protected runScripts = {} as Record<string, RunScript>
+    protected usedRunScripts = new Set<string>()
 
     public getRootProject() {
         if (!this.rootProject) throw new Error("E167 No root project created")
@@ -166,7 +167,30 @@ export const DependencyTracker = new class DependencyTracker {
         this.runScripts[name] = script
     }
 
+    public useRunScript(name: string) {
+        if (!this.isInitProject) return
+        Debug.log("...", "Using run script", name)
+        this.usedRunScripts.add(name)
+    }
+
     public getRunScripts() {
-        return { ...this.runScripts }
+        const result = { ...this.runScripts }
+        for (const name of this.usedRunScripts) {
+            Debug.log("DEP", "Adding used run script", name)
+            const script = this.runScripts[name]
+            if (!script) continue
+            const rawName = script.rawName
+            Debug.log("DEP", "  Found", rawName)
+
+            if (rawName in this.runScripts) {
+                throw new Error(`E062 Used script "${name}" conflicts with preexisting script "${rawName}"`)
+            }
+
+            result[rawName] = script
+        }
+
+        Debug.log("DEP", "Resolved run scripts", Object.keys(result))
+
+        return result
     }
 }()

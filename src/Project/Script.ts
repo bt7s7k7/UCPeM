@@ -5,6 +5,8 @@ import { PrepareScript } from "./PrepareScript"
 import { Project } from "./Project"
 
 export class Script<T extends Function> {
+    public readonly rawName = this.name
+
     public prepareRun(rootProject: Project, project: Project) {
         Object.assign(this.constants, this.getConstantsValues(rootProject, project))
 

@@ -2,6 +2,7 @@
 import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { join, relative } from "path"
+import "source-map-support/register"
 import { inspect } from "util"
 import { AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"

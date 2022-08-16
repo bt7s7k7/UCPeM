@@ -13,7 +13,7 @@ import { Project } from "./Project"
 import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
 import { RunScript } from "./RunScript"
-import { makeResourceID } from "./util"
+import { makeResourceID, parseResourceID } from "./util"
 
 let anonId = 0
 
@@ -203,12 +203,20 @@ export namespace ConfigLoader {
                     createdResources[id] = createdResource
                     return createdResource
                 },
-                use(...dep) {
+                use(...dep: (ConfigAPI.Dependency | ConfigAPI.ScriptRef)[]) {
                     const name = `__${anonId++}`
                     this.res(name, ...dep, api.internal())
+                    for (const dependency of dep) {
+                        if ("run" in dependency) {
+                            const { portName } = parseResourceID(dependency.id)
+                            DependencyTracker.useRunScript(portName + "+" + dependency.name)
+                        }
+                    }
                 },
                 script(name, callback, options = { desc: "-no description provided-" }) {
-                    DependencyTracker.addRunScript(projectBuilder.name, name, new RunScript(callback, constants, name, offset, options))
+                    const script = new RunScript(callback, constants, name, offset, options)
+                    DependencyTracker.addRunScript(projectBuilder.name, name, script)
+                    projectBuilder.addRunScript(script)
                     const resource = this.res(SCRIPT_RES_PREFIX + name, ...(options.dependencies ? options.dependencies : []))
                     return makeScriptRef(resource, dirPath, name)
                 },

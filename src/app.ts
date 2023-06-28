@@ -4,10 +4,10 @@ import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync
 import { join, relative } from "path"
 import "source-map-support/register"
 import { inspect } from "util"
-import { AliasManager } from "./AliasManager"
+import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
 import { CopyUtil } from "./CopyUtil"
-import { CONFIG_FILE_NAME, CURRENT_PATH, PORT_FOLDER_NAME, state } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
@@ -255,6 +255,13 @@ const cli = new CLI("ucpem <operation>", {
             AliasManager.unsetAlias(name)
             console.log(`Removed alias ${name}`)
         }
+    },
+    paths: {
+        desc: "Prints all system paths used by SMWA",
+        async callback(args) {
+            console.log("Local ports: " + LOCAL_PORTS_PATH)
+            console.log("Alias config: " + ALIAS_FILE_PATH)
+        },
     }
 })
 

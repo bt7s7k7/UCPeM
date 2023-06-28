@@ -3,7 +3,7 @@ import { join } from "path"
 import { LOCAL_PORTS_PATH } from "./global"
 import { UserError } from "./UserError"
 
-const ALIAS_FILE_PATH = join(LOCAL_PORTS_PATH, "alias.json")
+export const ALIAS_FILE_PATH = join(LOCAL_PORTS_PATH, "alias.json")
 type AliasMap = Record<string, string[]>
 
 export namespace AliasManager {

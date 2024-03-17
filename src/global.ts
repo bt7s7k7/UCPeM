@@ -13,5 +13,6 @@ export const LOCAL_PORTS_PATH = process.env.UCPEM_LOCAL_PORTS ?? join(homedir(),
 
 export var state = {
     debug: false,
-    compact: false
+    compact: false,
+    quiet: false
 }

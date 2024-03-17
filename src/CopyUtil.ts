@@ -61,7 +61,7 @@ export namespace CopyUtil {
 
     export async function copy(source: string, target: string, options: CopyOptions | CopyOptions["replacements"] = {}) {
         options = options instanceof Array ? { replacements: options } : options
-        if (state.compact) options.quiet = true
+        if (state.compact || state.quiet) options.quiet = true
         if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}] Copying ${source} → ${target}`)
         for await (const file of find(source)) {
             const offset = relative(source, file.path)

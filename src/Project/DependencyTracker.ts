@@ -1,5 +1,6 @@
 import { Debug } from "../Debug"
 import { GITHUB_PREFIX } from "../global"
+import { ConfigAPI } from "./ConfigAPI"
 import { Project } from "./Project"
 import { Resource } from "./Resource"
 import { RunScript } from "./RunScript"
@@ -192,5 +193,41 @@ export const DependencyTracker = new class DependencyTracker {
         Debug.log("DEP", "Resolved run scripts", Object.keys(result))
 
         return result
+    }
+
+    public dump(): ConfigAPI.ProjectDetails {
+        this.filterPorts()
+
+        const resources = new Map<string, ConfigAPI.ProjectDetails.Resource>()
+        const ports = new Map<string, ConfigAPI.ProjectDetails.Port>()
+        const projects = new Map<string, ConfigAPI.ProjectDetails.Project>()
+
+        for (const resource of Object.values(this.resourceIndex)) {
+            resources.set(resource.id, {
+                id: resource.id, dependencies: [...resource.dependencies], internal: resource.internal, isScript: resource.isScript,
+                path: resource.path, portName: resource.portName, resourceName: resource.resourceName, scriptName: resource.scriptName
+            })
+        }
+
+        for (const project of Object.values(this.projectIndex)) {
+            projects.set(project.name, {
+                name: project.name, path: project.path, portFolderPath: project.portFolderPath,
+                resources: project.resourceList.map(v => v.id)
+            })
+        }
+
+        for (const [port, source] of Object.entries(this.portIndex)) {
+            ports.set(port, {
+                id: port,
+                source,
+                missing: this.unresolvedPorts.has(port)
+            })
+        }
+
+        return {
+            resources: Object.fromEntries(resources),
+            projects: Object.fromEntries(projects),
+            ports: Object.fromEntries(ports)
+        }
     }
 }()

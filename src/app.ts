@@ -7,17 +7,17 @@ import { inspect } from "util"
 import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
 import { CopyUtil } from "./CopyUtil"
-import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state } from "./global"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
 import { update } from "./Install/update"
 import { LocalLinker } from "./LocalLinker"
 import { DependencyTracker } from "./Project/DependencyTracker"
-import { LinkHistory } from "./Project/link"
 import { Project } from "./Project/Project"
-import { runScript } from "./runScript"
+import { LinkHistory } from "./Project/link"
 import { UserError } from "./UserError"
+import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state } from "./global"
+import { runScript } from "./runScript"
 
 const cli = new CLI("ucpem <operation>", {
     _devinfo: {
@@ -38,6 +38,15 @@ const cli = new CLI("ucpem <operation>", {
             project.logTree()
             DependencyTracker.logPorts()
             DependencyTracker.logMissing()
+        }
+    },
+    "info json": {
+        desc: "Displays all project resources in machine readable JSON format",
+        async callback() {
+            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            await project.loadAllPorts()
+
+            console.log(DependencyTracker.dump(), null, 4)
         }
     },
     "info brief": {

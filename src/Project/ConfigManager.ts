@@ -3,16 +3,16 @@ import { existsSync, readFileSync } from "fs"
 import { createRequire } from "module"
 import { dirname, join, relative } from "path"
 import { CopyUtil } from "../CopyUtil"
+import { UserError } from "../UserError"
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, SCRIPT_RES_PREFIX } from "../global"
 import { executeCommand } from "../runner"
-import { UserError } from "../UserError"
 import { ConfigAPI } from "./ConfigAPI"
 import { DependencyTracker } from "./DependencyTracker"
-import { link } from "./link"
 import { Project } from "./Project"
 import { ProjectBuilder } from "./ProjectBuilder"
 import { ResourceBuilder } from "./ResourceBuilder"
 import { RunScript } from "./RunScript"
+import { link } from "./link"
 import { makeResourceID, parseResourceID } from "./util"
 
 let anonId = 0
@@ -78,7 +78,7 @@ export namespace ConfigLoader {
             .replace(/\/\*\s*@REWRITE\s*\*\//g, ", { rewrite: true }")
             + "\n//# sourceURL=file://" + path
 
-        const script = eval(`(require, __dirname) => {${scriptSource + "\n"}}`) as (require: typeof scriptRequire, __dirname: string) => void
+        const script = new Function("require", "__dirname", scriptSource + "\n") as (require: typeof scriptRequire, __dirname: string) => void
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -116,6 +116,9 @@ export namespace ConfigLoader {
 
         const api: ConfigAPI.API = {
             constants,
+            getProjectDetails() {
+                return DependencyTracker.dump()
+            },
             log(...msg) {
                 console.log(`[${chalk.cyanBright("SCRIPT")}]`, ...msg)
             },

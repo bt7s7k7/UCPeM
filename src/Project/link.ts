@@ -10,10 +10,12 @@ export function link(source: string, target: string, sourceGlobal = false, targe
     const targetPath = targetGlobal ? target : "./" + relative(projectRoot, target)
 
     const message = `[${chalk.cyanBright("LINK")}] Linking ${sourcePath} → ${targetPath}`
-    if (state.compact) {
-        process.stdout.write("\r\u001b[A\u001b[K" + message + "\r\n")
-    } else {
-        console.log(message)
+    if (!state.quiet) {
+        if (state.compact) {
+            process.stdout.write("\r\u001b[A\u001b[K" + message + "\r\n")
+        } else {
+            console.log(message)
+        }
     }
 
     LinkHistory.push({ source, target })
@@ -22,7 +24,7 @@ export function link(source: string, target: string, sourceGlobal = false, targe
         symlinkSync(source, target, "junction")
     } catch (err) {
         if (err.code == "EEXIST") {
-            if (!state.compact) console.log(`    └─ File already exists`)
+            if (!state.compact && !state.quiet) console.log(`    └─ File already exists`)
         } else {
             throw err
         }

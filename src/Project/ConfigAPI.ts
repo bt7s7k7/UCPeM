@@ -49,6 +49,38 @@ export namespace ConfigAPI {
         callback: any
     }
 
+    export interface ProjectDetails {
+        resources: Record<string, ProjectDetails.Resource>
+        projects: Record<string, ProjectDetails.Project>
+        ports: Record<string, ProjectDetails.Port>
+    }
+
+    export namespace ProjectDetails {
+        export interface Resource {
+            id: string
+            path: string
+            dependencies: string[]
+            internal: boolean
+            portName: string
+            isScript: boolean
+            resourceName: string
+            scriptName: string | null
+        }
+
+        export interface Project {
+            name: string
+            path: string
+            resources: string[]
+            portFolderPath: string
+        }
+
+        export interface Port {
+            id: string
+            source: string
+            missing: boolean
+        }
+    }
+
     export interface API {
         log(...msg: any[]): void
 
@@ -57,6 +89,9 @@ export namespace ConfigAPI {
         github(path: string): Port
         /** Imports a port from any git repo */
         git(path: string): Port
+
+        /** Returns information about loaded projects and resources. Only available during callbacks. */
+        getProjectDetails(): ProjectDetails
 
 
         /** Sets a path for a resource, relative to prefix, must include resource folder (i.e. "./src/Button" not "./src/" ← use `project.prefix()` for that) */

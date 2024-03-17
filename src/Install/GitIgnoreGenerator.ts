@@ -13,7 +13,7 @@ export const GitIgnoreGenerator = new class GitIgnoreGenerator {
         Object.entries(this.generatedFiles).forEach(([path, files]) => {
             const ignoreFiles = [
                 GITIGNORE_SECTION_BEGIN,
-                ...files
+                ...[...files].map(v => "/" + v)
             ]
 
             const gitignorePath = join(path, ".gitignore")

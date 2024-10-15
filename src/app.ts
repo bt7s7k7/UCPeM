@@ -10,7 +10,7 @@ import { CopyUtil } from "./CopyUtil"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
-import { update } from "./Install/update"
+import { checkChanges, update } from "./Install/update"
 import { LocalLinker } from "./LocalLinker"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
@@ -91,6 +91,12 @@ const cli = new CLI("ucpem <operation>", {
             await install()
             await DependencyTracker.runPrepares()
             await linkResources()
+        }
+    },
+    "update check": {
+        desc: "For every installed port, checks git status to detect any changes",
+        async callback() {
+            await checkChanges()
         }
     },
     update: {

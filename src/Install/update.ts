@@ -4,11 +4,20 @@ import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global"
 import { Project } from "../Project/Project"
 import { executeCommand } from "../runner"
 
-export async function update(updateLinkedPorts: false | "include local ports" = false) {
-    const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+function* _enumerateInstalledPorts(project: Project) {
     const installedPorts = readdirSync(project.portFolderPath)
 
     for (const portFolder of installedPorts) {
+        const fullPath = join(project.portFolderPath, portFolder)
+        if (statSync(fullPath).isDirectory()) {
+            yield portFolder
+        }
+    }
+}
+
+export async function update(updateLinkedPorts: false | "include local ports" = false) {
+    const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+    for (const portFolder of _enumerateInstalledPorts(project)) {
         const fullPath = join(project.portFolderPath, portFolder)
         if (statSync(fullPath).isDirectory()) {
             if (updateLinkedPorts || !lstatSync(fullPath).isSymbolicLink()) {
@@ -16,6 +25,16 @@ export async function update(updateLinkedPorts: false | "include local ports" = 
             } else {
                 console.log(`Not updating "${portFolder}" because it's probably a local link port`)
             }
+        }
+    }
+}
+
+export async function checkChanges() {
+    const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+    for (const portFolder of _enumerateInstalledPorts(project)) {
+        const fullPath = join(project.portFolderPath, portFolder)
+        if (statSync(fullPath).isDirectory()) {
+            await executeCommand(`git status --porcelain=v1`, fullPath)
         }
     }
 }

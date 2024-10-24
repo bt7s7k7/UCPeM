@@ -11,9 +11,11 @@ export const GitIgnoreGenerator = new class GitIgnoreGenerator {
 
     public generateIgnores() {
         Object.entries(this.generatedFiles).forEach(([path, files]) => {
+            const filesSorted = [...files].sort()
+
             const ignoreFiles = [
                 GITIGNORE_SECTION_BEGIN,
-                ...[...files].map(v => "/" + v)
+                ...filesSorted.map(v => "/" + v)
             ]
 
             const gitignorePath = join(path, ".gitignore")

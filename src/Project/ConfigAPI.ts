@@ -3,6 +3,7 @@ export namespace ConfigAPI {
     interface CopyOptions {
         quiet?: boolean
         replacements?: [RegExp, string][]
+        predicate?: (path: string) => boolean
     }
 
     export interface RunScriptOptions {

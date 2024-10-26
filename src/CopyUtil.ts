@@ -7,6 +7,7 @@ import { state } from "./global"
 interface CopyOptions {
     quiet?: boolean
     replacements?: [RegExp, string][]
+    predicate?: (path: string) => boolean
 }
 
 export namespace CopyUtil {
@@ -68,11 +69,13 @@ export namespace CopyUtil {
             if (!file.isDirectory) {
                 if (!options.replacements) {
                     const targetPath = join(target, offset)
+                    if (options.predicate && !options.predicate(targetPath)) continue
                     if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
                     ensureDirectory(dirname(targetPath), options)
                     copyFileSync(file.path, targetPath)
                 } else {
                     const targetPath = massReplace(join(target, offset), options.replacements)
+                    if (options.predicate && !options.predicate(targetPath)) continue
                     if (!options.quiet) console.log(`[${chalk.greenBright("COPY")}]   ${file.path} → ${targetPath}`)
                     ensureDirectory(dirname(targetPath), options)
                     if (targetPath.includes("__SKIP")) {

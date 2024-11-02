@@ -1,6 +1,6 @@
 import { lstatSync, readdirSync, statSync } from "fs"
 import { join } from "path"
-import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global"
+import { CURRENT_PATH } from "../global"
 import { Project } from "../Project/Project"
 import { executeCommand } from "../runner"
 
@@ -16,7 +16,7 @@ function* _enumerateInstalledPorts(project: Project) {
 }
 
 export async function update(updateLinkedPorts: false | "include local ports" = false) {
-    const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+    const project = Project.fromDirectory(CURRENT_PATH)
     for (const portFolder of _enumerateInstalledPorts(project)) {
         const fullPath = join(project.portFolderPath, portFolder)
         if (statSync(fullPath).isDirectory()) {
@@ -30,7 +30,7 @@ export async function update(updateLinkedPorts: false | "include local ports" = 
 }
 
 export async function checkChanges() {
-    const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+    const project = Project.fromDirectory(CURRENT_PATH)
     for (const portFolder of _enumerateInstalledPorts(project)) {
         const fullPath = join(project.portFolderPath, portFolder)
         if (statSync(fullPath).isDirectory()) {

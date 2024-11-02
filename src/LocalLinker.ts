@@ -1,6 +1,6 @@
 import { lstatSync, mkdirSync, readdirSync, rmSync, statSync, unlinkSync } from "fs"
 import { join } from "path"
-import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH } from "./global"
+import { CURRENT_PATH, LOCAL_PORTS_PATH } from "./global"
 import { LocalPortsScout } from "./LocalPortsScout"
 import { link } from "./Project/link"
 import { Project } from "./Project/Project"
@@ -130,6 +130,6 @@ export class LocalLinker {
     }
 
     constructor(
-        protected readonly project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+        protected readonly project = Project.fromDirectory(CURRENT_PATH)
     ) { }
 }

@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, rmSync } from "fs"
 import { join } from "path"
 import { CLI, Command } from "./CLI"
 import { Debug } from "./Debug"
-import { CONFIG_FILE_NAME, CURRENT_PATH, GITHUB_PREFIX, LOCAL_PORTS_PATH, RUN_SCRIPT_CACHE } from "./global"
+import { CURRENT_PATH, GITHUB_PREFIX, LOCAL_PORTS_PATH, RUN_SCRIPT_CACHE } from "./global"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { parseNameFromPath, processClonePath } from "./Project/util"
@@ -12,7 +12,7 @@ import { UserError } from "./UserError"
 export async function runScript(args: string[]) {
     const rootProject = (() => {
         try {
-            return Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            return Project.fromDirectory(CURRENT_PATH)
         } catch (err) {
             if (err.message.includes("E064")) {
                 return Project.createDummy(CURRENT_PATH)
@@ -85,7 +85,7 @@ export async function runScript(args: string[]) {
                         if (found) {
                             Debug.log("RUN", "Found!", found)
                             DependencyTracker.reset()
-                            return Project.fromFile(join(found, CONFIG_FILE_NAME))
+                            return Project.fromDirectory(found)
                         }
                     }
 
@@ -116,7 +116,7 @@ export async function runScript(args: string[]) {
 
                     if (createSuccessful) {
                         DependencyTracker.reset()
-                        return Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
+                        return Project.fromDirectory(clonePath)
                     }
 
                     throw new UserError(`E67 Cannot find script source "${source}"`)

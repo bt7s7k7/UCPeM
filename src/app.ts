@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "fs"
-import { join, relative } from "path"
+import { relative } from "path"
 import "source-map-support/register"
 import { inspect } from "util"
 import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
@@ -23,7 +23,7 @@ const cli = new CLI("ucpem <operation>", {
     _devinfo: {
         desc: "Displays information about the current project",
         async callback() {
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const project = Project.fromDirectory(CURRENT_PATH)
             await project.loadAllPorts()
 
             console.log(inspect(project, true, 50, true))
@@ -32,7 +32,7 @@ const cli = new CLI("ucpem <operation>", {
     info: {
         desc: "Displays information about the current project",
         async callback() {
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const project = Project.fromDirectory(CURRENT_PATH)
             await project.loadAllPorts()
 
             project.logTree()
@@ -43,7 +43,7 @@ const cli = new CLI("ucpem <operation>", {
     "info json": {
         desc: "Displays all project resources in machine readable JSON format",
         async callback() {
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const project = Project.fromDirectory(CURRENT_PATH)
             await project.loadAllPorts()
 
             console.log(DependencyTracker.dump(), null, 4)
@@ -52,7 +52,7 @@ const cli = new CLI("ucpem <operation>", {
     "info brief": {
         desc: "Displays all project resources",
         async callback() {
-            const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+            const project = Project.fromDirectory(CURRENT_PATH)
             project.logTree("shallow")
         }
     },

@@ -1,7 +1,7 @@
 import chalk from "chalk"
 import { join } from "path"
 import { performance } from "perf_hooks"
-import { CONFIG_FILE_NAME, CURRENT_PATH } from "../global"
+import { CURRENT_PATH } from "../global"
 import { LocalLinker } from "../LocalLinker"
 import { LocalPortsScout } from "../LocalPortsScout"
 import { DependencyTracker } from "../Project/DependencyTracker"
@@ -16,7 +16,7 @@ export async function install(type: "default" | "remote" | "local" = "default") 
 
     const iter = async (first = false) => {
         DependencyTracker.reset()
-        const project = Project.fromFile(join(CURRENT_PATH, CONFIG_FILE_NAME))
+        const project = Project.fromDirectory(CURRENT_PATH)
         const localLinker = new LocalLinker(project)
         const portFolderPath = project.portFolderPath
 
@@ -35,7 +35,7 @@ export async function install(type: "default" | "remote" | "local" = "default") 
                         throw new UserError(`E176 Cannot find local copy of port ${name} (${path})`)
                     }
                     await executeCommand(`git clone "${path}" "${clonePath}"`, project.path)
-                    Project.fromFile(join(clonePath, CONFIG_FILE_NAME))
+                    Project.fromDirectory(clonePath)
                     await DependencyTracker.runPrepares(name)
                 }
             }

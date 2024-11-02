@@ -1,6 +1,7 @@
-import { mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs"
+import { existsSync, mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs"
 import { basename, join } from "path"
-import { CONFIG_FILE_NAME, PORT_FOLDER_NAME } from "../global"
+import { Debug } from "../Debug"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, TS_CONFIG_FILE_NAME } from "../global"
 import { ConfigLoader } from "./ConfigManager"
 import { DependencyTracker } from "./DependencyTracker"
 import { Resource } from "./Resource"
@@ -34,7 +35,7 @@ export class Project {
 
                 if (stats) {
                     if (stats.isDirectory()) {
-                        Project.fromFile(join(fullPath, CONFIG_FILE_NAME))
+                        Project.fromDirectory(fullPath)
                     }
                 }
             }
@@ -68,6 +69,18 @@ export class Project {
     ) {
         this.resourceList = Object.values(resources)
         DependencyTracker.addProject(this)
+    }
+
+    static fromDirectory(path: string) {
+        const tsConfigFilePath = join(path, TS_CONFIG_FILE_NAME)
+        Debug.log("PRO", "Trying to get typescript config", tsConfigFilePath)
+        if (existsSync(tsConfigFilePath)) {
+            return ConfigLoader.parseConfig(tsConfigFilePath)
+        }
+
+        const configFilePath = join(path, CONFIG_FILE_NAME)
+        Debug.log("PRO", "Trying to get javascript config", configFilePath)
+        return ConfigLoader.parseConfig(configFilePath)
     }
 
     static fromFile(path: string) {

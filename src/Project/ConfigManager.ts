@@ -1,10 +1,11 @@
 import chalk from "chalk"
+import { transformSync } from "esbuild"
 import { existsSync, readFileSync } from "fs"
 import { createRequire } from "module"
-import { dirname, join, relative } from "path"
+import { dirname, extname, join, relative, resolve } from "path"
 import { CopyUtil } from "../CopyUtil"
 import { UserError } from "../UserError"
-import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, SCRIPT_RES_PREFIX } from "../global"
+import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, SCRIPT_RES_PREFIX, TS_CONFIG_FILE_NAME } from "../global"
 import { executeCommand } from "../runner"
 import { ConfigAPI } from "./ConfigAPI"
 import { DependencyTracker } from "./DependencyTracker"
@@ -22,6 +23,12 @@ class OrphanedConfigError extends Error { }
 function findMainConfig(path: string) {
     while (path != dirname(path)) {
         path = dirname(path)
+
+        const tsConfigFilePath = join(path, TS_CONFIG_FILE_NAME)
+        if (existsSync(tsConfigFilePath)) {
+            return ConfigLoader.parseConfig(tsConfigFilePath)
+        }
+
         const configFilePath = join(path, CONFIG_FILE_NAME)
         if (existsSync(configFilePath)) {
             return ConfigLoader.parseConfig(configFilePath)
@@ -44,18 +51,57 @@ export namespace ConfigLoader {
         return projectBuilder.build()
     }
 
-    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
-        const offset = relative(projectBuilder.path, dirPath)
-
-        let configText: string
-        try {
-            configText = readFileSync(path).toString()
-        } catch (err) {
-            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
-            else throw err
+    export function transformSource(path: string, text: string) {
+        if (extname(path) == ".js") {
+            return text
+                .replace(/\/\*\s*@REWRITE\s*\*\//g, ", { rewrite: true }")
+                + "\n//# sourceURL=file://" + path
         }
+
+        const result = transformSync(text, {
+            format: "cjs",
+            sourcemap: "inline",
+            platform: "node",
+            sourcefile: path,
+            loader: "ts"
+        })
+
+        return result.code
+    }
+
+    export type ScriptRequire = (id: string, options?: { rewrite?: boolean }) => any
+
+    export function loadModule(path: string, text: string) {
+        return new Function("require", "__dirname", "module", transformSource(path, text) + "\n") as (require: ScriptRequire, __dirname: string, module: NodeJS.Module) => void
+    }
+
+    export function executeModule(path: string, text: string, api: ConfigAPI.API, moduleCache: Map<string, any>) {
+        const scriptRequire = createScriptRequire(path, api, moduleCache)
+
+        const module: NodeJS.Module = {
+            id: path,
+            children: [],
+            exports: {},
+            filename: path,
+            isPreloading: false,
+            loaded: false,
+            path: dirname(path),
+            paths: [],
+            require: scriptRequire as any,
+            parent: null!
+        }
+
+        const moduleFactory = loadModule(path, text)
+        moduleFactory(scriptRequire, module.path, module)
+
+        return module.exports
+    }
+
+    export function createScriptRequire(path: string, api: ConfigAPI.API, moduleCache: Map<string, any>) {
+        const dirPath = dirname(path)
+
         const scriptRequireBase = createRequire(path)
-        const scriptRequire = (id: string, options: { rewrite?: boolean } = {}) => {
+        const scriptRequire: ScriptRequire = (id, options = {}) => {
             if (id == "ucpem") return api
 
             if (options.rewrite) {
@@ -71,14 +117,35 @@ export namespace ConfigLoader {
                 return scriptRequireBase(newID)
             }
 
+            if (id.startsWith(".") && extname(id) == "") {
+                const tsFile = id + ".ts"
+                const fullPath = resolve(dirPath, tsFile)
+
+                if (existsSync(fullPath)) {
+                    const cached = moduleCache.get(fullPath)
+                    if (cached) return cached
+                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api, moduleCache)
+                    moduleCache.set(fullPath, module)
+                    return module
+                }
+            }
+
             return scriptRequireBase(id)
         }
 
-        const scriptSource = configText
-            .replace(/\/\*\s*@REWRITE\s*\*\//g, ", { rewrite: true }")
-            + "\n//# sourceURL=file://" + path
+        return scriptRequire
+    }
 
-        const script = new Function("require", "__dirname", scriptSource + "\n") as (require: typeof scriptRequire, __dirname: string) => void
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
+        const offset = relative(projectBuilder.path, dirPath)
+
+        let configText: string
+        try {
+            configText = readFileSync(path).toString()
+        } catch (err) {
+            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
+            else throw err
+        }
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -234,8 +301,10 @@ export namespace ConfigLoader {
 
         Object.entries(api).filter(v => typeof v[1] == "function").forEach(([key, value]) => (api as any)[key] = (value as Function).bind(api))
 
+        const moduleCache = new Map<string, any>()
+
         try {
-            script(scriptRequire, dirPath)
+            executeModule(path, configText, api, moduleCache)
         } catch (err) {
             if (err instanceof OrphanedConfigError) return "orphaned"
 

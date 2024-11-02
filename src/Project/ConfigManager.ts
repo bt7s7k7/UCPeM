@@ -230,7 +230,7 @@ export namespace ConfigLoader {
                 return await executeCommand(command, cwd)
             },
             async ucpem(command: string, cwd: string = dirPath) {
-                return await executeCommand("node " + require.main?.filename + " " + command, cwd)
+                return await executeCommand("node " + (require.main?.filename ?? __filename) + " " + command, cwd)
             },
             include(path) {
                 const target = join(dirPath, path)

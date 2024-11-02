@@ -66,7 +66,7 @@ export namespace ConfigLoader {
             loader: "ts"
         })
 
-        return result.code
+        return result.code + "\n//# sourceURL=file://" + path
     }
 
     export type ScriptRequire = (id: string, options?: { rewrite?: boolean }) => any

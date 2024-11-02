@@ -5,6 +5,7 @@
     "main": "build/app.js",
     "scripts": {
         "build": "tsc --incremental && npm run buildConfigTypedef",
+        "dist": "yarn run build && node build/app.js run dist",
         "watch": "tsc --watch",
         "test-dev": "ts-node-dev --cls --watch ./build --respawn ./test/test.ts",
         "test-release": "npm run build && ncc build build/app.js && ts-node ./test/test.ts ./dist/index.js",

@@ -3,3 +3,6 @@
 /test/**/*.temp
 /.vscode
 /dist
+/pkg-ucpem
+# UCPEM
+ucpem_ports

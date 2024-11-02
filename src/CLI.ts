@@ -64,7 +64,7 @@ export class CLI {
 
             console.log(`Usage:\n  ${this.usageCommand}\n\nCommands:`)
             commandDefs.forEach(v => {
-                console.log(`  ${v.name}${" ".repeat(maxNameLength - v.name!.length)}- ${v.desc}`)
+                this.printCommandHelpMessage(v, maxNameLength)
             })
 
             if (this.fallback) this.fallback.fallbackInfo()
@@ -77,6 +77,10 @@ export class CLI {
     }
 
     protected fallback: Fallback | null = null
+
+    public printCommandHelpMessage(command: Command, maxNameLength: number) {
+        console.log(`  ${command.name}${" ".repeat(maxNameLength - command.name!.length)}- ${command.desc}`)
+    }
 
     public setFallback(fallback: Fallback) {
         this.fallback = fallback

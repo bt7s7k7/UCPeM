@@ -129,7 +129,19 @@ export async function runScript(args: string[]) {
 
     Debug.log("RUN", "Running from:", project.path)
 
-    const runCli = new CLI("ucpem run <name>", Object.assign({}, ...Object.entries(DependencyTracker.getRunScripts()).map(([name, script]) => ({
+    const runScripts = Object.entries(DependencyTracker.getRunScripts())
+    runScripts.sort(([a], [b]) => {
+        if (b.includes("+") && !a.includes("+")) {
+            return -1
+        }
+
+        if (a < b) return -1
+        if (a > b) return 1
+
+        return 0
+    })
+
+    const runCli = new CLI("ucpem run <name>", Object.assign({}, ...runScripts.map(([name, script]) => ({
         [name]: {
             desc: script.options.desc,
             async callback(args) {
@@ -138,6 +150,23 @@ export async function runScript(args: string[]) {
             argc: script.options.argc
         } as Command
     }))))
+
+    let own = true
+    const oldPrintHelp = runCli.printCommandHelpMessage
+    runCli.printCommandHelpMessage = (command, maxNameLength) => {
+        const name = command.name!
+        if (own && name.includes("+")) {
+            own = false
+            console.log("\x1b[90m")
+            console.log("Inherited commands:")
+        }
+
+        oldPrintHelp.call(runCli, command, maxNameLength)
+    }
+
+    if (!own) {
+        process.stdout.write("\x1b[0m")
+    }
 
     await runCli.run(args)
 

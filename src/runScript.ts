@@ -135,6 +135,10 @@ export async function runScript(args: string[]) {
             return -1
         }
 
+        if (a.includes("+") && !b.includes("+")) {
+            return 1
+        }
+
         if (a < b) return -1
         if (a > b) return 1
 

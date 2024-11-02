@@ -25,6 +25,11 @@ project.script("dist", async () => {
                     pkg.dependencies["chalk"] = own.dependencies["chalk"]
                     pkg.dependencies["source-map-support"] = own.dependencies["source-map-support"]
                     pkg.bin = "index.cjs"
+                    pkg.types = "./index.d.ts"
+                    pkg.exports["."].types = "./index.d.ts"
+                },
+                async callback() {
+                    await copy(join(constants.projectPath, "build/config.d.ts"), join(constants.projectPath, "pkg-ucpem/index.d.ts"))
                 }
             })
 

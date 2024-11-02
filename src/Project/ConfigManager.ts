@@ -136,16 +136,8 @@ export namespace ConfigLoader {
         return scriptRequire
     }
 
-    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
+    export function createApi(dirPath: string, projectBuilder: ProjectBuilder, createdResources: Record<string, ConfigAPI.Resource>, configType: "child" | "normal") {
         const offset = relative(projectBuilder.path, dirPath)
-
-        let configText: string
-        try {
-            configText = readFileSync(path).toString()
-        } catch (err) {
-            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
-            else throw err
-        }
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -178,8 +170,6 @@ export namespace ConfigLoader {
                 }
             }
         }
-
-        const createdResources: Record<string, ConfigAPI.Resource> = {}
 
         const api: ConfigAPI.API = {
             constants,
@@ -300,6 +290,21 @@ export namespace ConfigLoader {
         }
 
         Object.entries(api).filter(v => typeof v[1] == "function").forEach(([key, value]) => (api as any)[key] = (value as Function).bind(api))
+
+        return api
+    }
+
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
+        let configText: string
+        try {
+            configText = readFileSync(path).toString()
+        } catch (err) {
+            if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
+            else throw err
+        }
+
+        const createdResources: Record<string, ConfigAPI.Resource> = {}
+        const api = createApi(dirPath, projectBuilder, createdResources, configType)
 
         const moduleCache = new Map<string, any>()
 

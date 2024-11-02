@@ -303,7 +303,7 @@ export const cases: Record<string, TestCase> = {
     "Should correctly execute the run utility with the correct cwd": {
         structure: {
             "ucpem.js": `
-                const { project, prepare, run } = require("ucpem")
+                const { project, prepare, run, constants } = require("ucpem")
 
                 project.res("resource",
                     prepare(async () => {
@@ -1072,7 +1072,7 @@ export const cases: Record<string, TestCase> = {
 
                     project.res("resource",
                         prepare(() => {
-                            console.log(constants)
+                            console.log(JSON.stringify(constants, null, 4))
                         })
                     )
                 `,
@@ -1081,7 +1081,7 @@ export const cases: Record<string, TestCase> = {
         },
         async callback() {
             includes(await run(`ucpem info`, ".", runnerSettings()), ".temp!resource")
-            includes(await run(`ucpem prepare`, ".", runnerSettings()), `projectPath: '${dir("")}/package'`)
+            includes(await run(`ucpem prepare`, ".", runnerSettings()), `"projectPath": "${dir("")}/package"`)
         }
     },
     "Should be able to add dependencies to scripts": {

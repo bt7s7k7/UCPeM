@@ -21,9 +21,9 @@ import { UserError } from "./UserError"
 import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state } from "./global"
 import { runScript } from "./runScript"
 
-if (require.main != module) {
-    module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
-} else {
+module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
+
+if (require.main == module) {
     const cli = new CLI("ucpem <operation>", {
         _devinfo: {
             desc: "Displays information about the current project",

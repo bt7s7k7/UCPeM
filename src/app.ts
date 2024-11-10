@@ -7,6 +7,7 @@ import { inspect } from "util"
 import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
 import { CLI } from "./CLI"
 import { CopyUtil } from "./CopyUtil"
+import { Debug } from "./Debug"
 import { install } from "./Install/install"
 import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
@@ -23,7 +24,9 @@ import { runScript } from "./runScript"
 
 module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
 
-if (require.main == module) {
+Debug.log("___", "Initializing UCPeM")
+
+if (require.main?.filename == module.filename) {
     const cli = new CLI("ucpem <operation>", {
         _devinfo: {
             desc: "Displays information about the current project",
@@ -287,7 +290,11 @@ if (require.main == module) {
 
     cli.setFallback({
         fallback: async (args) => {
-            const name = args.splice(0, 1)[0]
+            let name = args.splice(0, 1)[0]
+            if (name[name.length - 1] == "+") {
+                name = name.slice(0, -1)
+                Debug.enable()
+            }
             return AliasManager.runAlias(name, args)
         },
         fallbackInfo: () => {

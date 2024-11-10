@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "fs"
 import { join } from "path"
 import { LOCAL_PORTS_PATH } from "./global"
 import { UserError } from "./UserError"
+import { Debug } from "./Debug"
 
 export const ALIAS_FILE_PATH = join(LOCAL_PORTS_PATH, "alias.json")
 type AliasMap = Record<string, string[]>
@@ -53,16 +54,22 @@ export namespace AliasManager {
     }
 
     export function runAlias(name: string, args: string[]) {
+        Debug.log("ALS", "Running alias", name)
         const map = loadAliasMap()
+        Debug.log("ALS", "Loaded aliases", map)
 
         if (!(name in map)) return false
         const command = map[name]
+
+        Debug.log("ALS", "Command", command)
 
         process.argv = [
             ...process.argv.slice(0, 2),
             ...command,
             ...args
         ]
+
+        Debug.log("ALS", "Preparing to run", process.argv)
 
         const mainModule = require.main!
         delete require.cache[mainModule.filename]

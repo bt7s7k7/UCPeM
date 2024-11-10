@@ -8,7 +8,7 @@ ucpem init
 ```
 If you have a `.gitignore` file, it will be updated.
 
-A project contains an `ucpem.js` file, defining resources and their dependencies. 
+A project contains an `ucpem.js` or `ucpem.ts` file, defining resources and their dependencies. 
 
 Port is a repository path (for `git clone`). Resource names should be `[a-zA-Z0-9_]+` and cannot contain whitespace.
 
@@ -130,16 +130,17 @@ By default during `ucpem install`, local ports are used before cloning a remote 
 Local linking requires node version `^12.10.0`
 
 ## Installation
-1. Install globally
+1. Install from source
 ```
 git clone https://github.com/bt7s7k7/UCPeM.git
 npm install
 npm run build
 npm link
 ```
-2. Run once
-```html
-curl -L https://github.com/bt7s7k7/UCPeM/releases/latest/download/ucpem.js | node - <arguments>
+2. Install from npm
+```
+npm install ucpem
+yarn add ucpem
 ```
 ## Usage
 ```

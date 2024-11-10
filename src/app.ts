@@ -19,7 +19,7 @@ import { Project } from "./Project/Project"
 import { ProjectBuilder } from "./Project/ProjectBuilder"
 import { LinkHistory } from "./Project/link"
 import { UserError } from "./UserError"
-import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state } from "./global"
+import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state, TS_CONFIG_FILE_NAME } from "./global"
 import { runScript } from "./runScript"
 
 module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
@@ -202,7 +202,13 @@ if (require.main?.filename == module.filename) {
                     statSync(CONFIG_FILE_NAME)
                 } catch (err) {
                     if (err.code == "ENOENT") {
-                        writeFileSync(CONFIG_FILE_NAME, `/// <reference path="./.vscode/config.d.ts" />` + "\n")
+                        try {
+                            statSync(TS_CONFIG_FILE_NAME)
+                        } catch (err) {
+                            if (err.code == "ENOENT") {
+                                writeFileSync(CONFIG_FILE_NAME, `/// <reference path="./.vscode/config.d.ts" />` + "\n")
+                            } else throw err
+                        }
                     } else throw err
                 }
 

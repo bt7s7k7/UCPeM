@@ -58,7 +58,7 @@ export namespace AliasManager {
         const map = loadAliasMap()
         Debug.log("ALS", "Loaded aliases", map)
 
-        if (!(name in map)) return false
+        if (name == null || !(name in map)) return false
         const command = map[name]
 
         Debug.log("ALS", "Command", command)

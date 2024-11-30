@@ -273,8 +273,14 @@ if (require.main?.filename == module.filename) {
             argc: NaN,
             async callback(args) {
                 const name = args.splice(0, 1)[0]
-                AliasManager.setAlias(name, args)
-                console.log(`Added alias ${name} => ${args.join(" ")}`)
+                if (name == null) {
+                    console.log(`Please provide an alias name`)
+                } else if (args.length == 0) {
+                    console.log(`Please provide an alias command`)
+                } else {
+                    AliasManager.setAlias(name, args)
+                    console.log(`Added alias ${name} => ${args.join(" ")}`)
+                }
             }
         },
         unalias: {
@@ -297,7 +303,7 @@ if (require.main?.filename == module.filename) {
     cli.setFallback({
         fallback: async (args) => {
             let name = args.splice(0, 1)[0]
-            if (name[name.length - 1] == "+") {
+            if (name != null && name[name.length - 1] == "+") {
                 name = name.slice(0, -1)
                 Debug.enable()
             }

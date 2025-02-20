@@ -320,7 +320,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("resource/test.txt")).isFile() || fail("Required file is not a file")
-            } catch (err) {
+            } catch (err: any) {
                 if (err.code != "ENOENT") throw err
                 else fail("Required file was not found")
             }
@@ -345,7 +345,7 @@ export const cases: Record<string, TestCase> = {
             const info = await run("ucpem install")
             try {
                 statSync(dir("resource2"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -566,13 +566,13 @@ export const cases: Record<string, TestCase> = {
             await run(`git add . && git commit -m "Initial commit"`, "./port2", { stdio: "ignore" })
             await run(`ucpem install`, "./project")
 
-            try { statSync(dir("./project/resource")) } catch (err) { throw new TestFail(err.message) }
-            try { statSync(dir("./project/dependency")) } catch (err) { throw new TestFail(err.message) }
+            try { statSync(dir("./project/resource")) } catch (err: any) { throw new TestFail(err.message) }
+            try { statSync(dir("./project/dependency")) } catch (err: any) { throw new TestFail(err.message) }
 
             try {
                 statSync(dir("./project/dependency2"))
                 throw new TestFail("Link to an unneeded resource created")
-            } catch (err) { if (err.code != "ENOENT") throw new TestFail(err.message) }
+            } catch (err: any) { if (err.code != "ENOENT") throw new TestFail(err.message) }
         }
     },
     "Should properly install use resource": {
@@ -605,7 +605,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("project/dependency"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -641,7 +641,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("project/test/dependency"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -666,7 +666,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir(".ucpem/port"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -709,7 +709,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir(".ucpem/port/dependency/app.js"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -747,7 +747,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("./project/dependency"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -803,7 +803,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("./project/dependency/app.js"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -858,7 +858,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("./project/dependency/index.js"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -895,7 +895,7 @@ export const cases: Record<string, TestCase> = {
 
             try {
                 statSync(dir("./project/dependency"))
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -955,7 +955,7 @@ export const cases: Record<string, TestCase> = {
                 statSync(dir("./project/dependency2"))
                 lstatSync(dir("./project/ucpem_ports/port1")).isSymbolicLink() || fail("Port1 is not a symlink")
                 lstatSync(dir("./project/ucpem_ports/port2")).isSymbolicLink() || fail("Port2 is not a symlink")
-            } catch (err) {
+            } catch (err: any) {
                 throw new TestFail(err.message)
             }
         }
@@ -1181,5 +1181,11 @@ export const cases: Record<string, TestCase> = {
             includes(await run(`ucpem run run-dependency`, "./project"), "__WORKS")
             includes(await run(`ucpem run run-self`, "./project"), "__WORKS_2")
         }
+    },
+    "Sould": {
+        structure: {},
+        async callback() {
+
+        },
     }
 }

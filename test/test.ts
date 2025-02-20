@@ -3,7 +3,7 @@ import chalk from "chalk"
 import { join } from "path"
 import { performance } from "perf_hooks"
 import { executeCommand } from "../src/runner"
-import { fail, includes, setupTestDirectory, TestFail, __setCurrentDir } from "./testAPI"
+import { __setCurrentDir, fail, includes, setupTestDirectory, TestFail, testFolder } from "./testAPI"
 import { cases } from "./testCases"
 
 if (require.main == module) {
@@ -13,13 +13,16 @@ if (require.main == module) {
         __setCurrentDir("./.temp")
 
         for (const [should, { structure, callback, shouldFail }] of Object.entries(cases)) {
+            if (process.env.UCPEM_TEST_ONLY && process.env.UCPEM_TEST_ONLY != should) {
+                continue
+            }
             console.log(`[${chalk.cyanBright("TEST")}] ${chalk.cyanBright(should)}`)
-            await executeCommand("rm -rf .temp && mkdir .temp && cd .temp", join(__dirname), { stdio: "ignore" })
-            await setupTestDirectory(structure, join(__dirname, "./.temp"))
+            await executeCommand("rm -rf .temp && mkdir .temp && cd .temp", join(testFolder), { stdio: "ignore" })
+            await setupTestDirectory(structure, join(testFolder, "./.temp"))
             let error: Error | null = null
             try {
                 await callback()
-            } catch (err) {
+            } catch (err: any) {
                 error = err
             }
 

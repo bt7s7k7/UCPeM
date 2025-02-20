@@ -298,7 +298,7 @@ export namespace ConfigLoader {
         let configText: string
         try {
             configText = readFileSync(path).toString()
-        } catch (err) {
+        } catch (err: any) {
             if (err.code == "ENOENT") throw new UserError(`E064 Failed to find config file in ${dirname(path)}`)
             else throw err
         }
@@ -310,7 +310,7 @@ export namespace ConfigLoader {
 
         try {
             executeModule(path, configText, api, moduleCache)
-        } catch (err) {
+        } catch (err: any) {
             if (err instanceof OrphanedConfigError) return "orphaned"
 
             throw err

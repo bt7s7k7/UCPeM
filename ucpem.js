@@ -40,3 +40,21 @@ project.script("dist", async () => {
         await rm(join(constants.projectPath, "src/config.json"))
     }
 }, { desc: "Prepares a NPM package" })
+
+project.script("test", async (args) => {
+    try {
+        const { ProjectBuilder } = require("./ucpem_ports/Apsides/src/projectBuilder/ProjectBuilder")
+        const builder = new ProjectBuilder(constants.projectPath)
+        builder.entryPoint = "./test/test.ts"
+        builder.outFile = "./test.js"
+        builder.runArguments.push(...args)
+        builder.modifyOptions = (options) => {
+            options.format = "cjs"
+        }
+
+        await builder.build("run")
+    } finally {
+        await rm("test.js", { force: true })
+        await rm("test.js.map", { force: true })
+    }
+}, { desc: "Runs tests", argc: NaN }) 

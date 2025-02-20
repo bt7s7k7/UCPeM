@@ -1,8 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "fs"
 import { join } from "path"
+import { Debug } from "./Debug"
 import { LOCAL_PORTS_PATH } from "./global"
 import { UserError } from "./UserError"
-import { Debug } from "./Debug"
 
 export const ALIAS_FILE_PATH = join(LOCAL_PORTS_PATH, "alias.json")
 type AliasMap = Record<string, string[]>
@@ -12,7 +12,7 @@ export namespace AliasManager {
     export function loadAliasMap(): AliasMap {
         try { // Create the ports folder
             mkdirSync(LOCAL_PORTS_PATH)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "EEXIST") throw err
         }
 
@@ -20,7 +20,7 @@ export namespace AliasManager {
 
         try {
             aliasFileContent = readFileSync(ALIAS_FILE_PATH).toString()
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
         }
 

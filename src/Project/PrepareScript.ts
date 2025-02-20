@@ -1,7 +1,7 @@
-import chalk from "chalk";
-import { ConfigAPI } from "./ConfigAPI";
-import { Project } from "./Project";
-import { Script } from "./Script";
+import chalk from "chalk"
+import { ConfigAPI } from "./ConfigAPI"
+import { Project } from "./Project"
+import { Script } from "./Script"
 
 export class PrepareScript extends Script<() => Promise<void>> {
 

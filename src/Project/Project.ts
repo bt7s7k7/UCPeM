@@ -26,7 +26,7 @@ export class Project {
                 let stats: Stats | null = null
                 try {
                     stats = statSync(fullPath)
-                } catch (err) {
+                } catch (err: any) {
                     if (err.code == "ENOENT") {
                         console.log(`Detected broken link for "${portFolder}", deleting...`)
                         unlinkSync(fullPath)
@@ -39,7 +39,7 @@ export class Project {
                     }
                 }
             }
-        } catch (err) {
+        } catch (err: any) {
             if ("code" in err && err.code == "ENOENT" && err.path == this.portFolderPath) {
                 if (createPortsFolder) {
                     console.log("Ports folder doesn't exist, creating...")
@@ -53,7 +53,7 @@ export class Project {
     public createPortsFolder() {
         try {
             mkdirSync(this.portFolderPath)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "EEXIST") throw err
         }
     }

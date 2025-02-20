@@ -25,7 +25,7 @@ export function processClonePath(path: string) {
             const url = new URL(path)
             url.username = process.env.UCPEM_TOKEN
             path = url.href
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ERR_INVALID_URL") throw err
         }
     }

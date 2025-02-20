@@ -12,7 +12,7 @@ export namespace LocalPortsScout {
 
         try {
             files = readdirSync(LOCAL_PORTS_PATH)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
             else return []
         }

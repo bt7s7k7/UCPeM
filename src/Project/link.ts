@@ -22,7 +22,7 @@ export function link(source: string, target: string, sourceGlobal = false, targe
 
     try {
         symlinkSync(source, target, "junction")
-    } catch (err) {
+    } catch (err: any) {
         if (err.code == "EEXIST") {
             if (!state.compact && !state.quiet) console.log(`    └─ File already exists`)
         } else {

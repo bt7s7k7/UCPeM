@@ -4,5 +4,6 @@
 /.vscode
 /dist
 /pkg-ucpem
+/test.js*
 # UCPEM
 ucpem_ports

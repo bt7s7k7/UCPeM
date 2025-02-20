@@ -12,14 +12,14 @@ export class LocalLinker {
 
         try { // Create the ports folder
             mkdirSync(LOCAL_PORTS_PATH)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "EEXIST") throw err
         }
 
         try { // Delete the previous link if it exists
             unlinkSync(linkTarget)
             console.log(`Port with the same name is already synced, replacing...`)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
         }
 
@@ -33,7 +33,7 @@ export class LocalLinker {
             console.log(`Deleting...`)
             unlinkSync(linkTarget)
             console.log(`Done!`)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
             else throw new UserError("E052 Project was not published")
         }
@@ -63,7 +63,7 @@ export class LocalLinker {
         try {
             rmSync(linkTarget, { recursive: true })
             console.log(`A project with name "${name}" was already imported, deleting...`)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
         }
 
@@ -86,7 +86,7 @@ export class LocalLinker {
 
         try {
             unlinkSync(linkTarget)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
             else throw new UserError(`E053 Project named "${name}" was not linked`)
         }
@@ -101,7 +101,7 @@ export class LocalLinker {
 
         try {
             files = readdirSync(this.project.portFolderPath)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
             else throw new UserError(`E056 There is no ports folder, run "ucpem install"`)
         }
@@ -118,7 +118,7 @@ export class LocalLinker {
 
         try {
             files = readdirSync(this.project.portFolderPath)
-        } catch (err) {
+        } catch (err: any) {
             if (err.code != "ENOENT") throw err
             else return []
         }

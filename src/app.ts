@@ -128,7 +128,7 @@ if (require.main?.filename == module.filename) {
                     try {
                         unlinkSync(target)
                         await CopyUtil.copy(source, target)
-                    } catch (err) {
+                    } catch (err: any) {
                         if (err.code == "EISDIR") {
                             // Real folder already, skipping
                         } else {
@@ -148,7 +148,7 @@ if (require.main?.filename == module.filename) {
                     if (relative(process.cwd(), target).startsWith("..")) continue
                     try {
                         unlinkSync(target)
-                    } catch (err) {
+                    } catch (err: any) {
                         if (err.code == "ENOENT") {
                             // We already did this one, skip
                         } else throw err
@@ -167,7 +167,7 @@ if (require.main?.filename == module.filename) {
 
                     try {
                         rmSync(target, { recursive: true })
-                    } catch (err) {
+                    } catch (err: any) {
                         if (err.code == "ENOENT") {
                             // Already deleted skipping
                         } else throw err
@@ -190,7 +190,7 @@ if (require.main?.filename == module.filename) {
 
                 try {
                     writeFileSync(".vscode/config.d.ts", typedefText)
-                } catch (err) {
+                } catch (err: any) {
                     if (err.code != "ENOENT") throw err
                     else {
                         mkdirSync(".vscode")
@@ -200,11 +200,11 @@ if (require.main?.filename == module.filename) {
 
                 try {
                     statSync(CONFIG_FILE_NAME)
-                } catch (err) {
+                } catch (err: any) {
                     if (err.code == "ENOENT") {
                         try {
                             statSync(TS_CONFIG_FILE_NAME)
-                        } catch (err) {
+                        } catch (err: any) {
                             if (err.code == "ENOENT") {
                                 writeFileSync(CONFIG_FILE_NAME, `/// <reference path="./.vscode/config.d.ts" />` + "\n")
                             } else throw err
@@ -221,7 +221,7 @@ if (require.main?.filename == module.filename) {
                     if (!text.includes(".vscode")) {
                         appendFileSync(".gitignore", "\n/.vscode\n")
                     }
-                } catch (err) {
+                } catch (err: any) {
                     if (err.code != "ENOENT") throw err
                 }
             }

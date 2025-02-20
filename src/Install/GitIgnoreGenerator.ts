@@ -24,7 +24,7 @@ export const GitIgnoreGenerator = new class GitIgnoreGenerator {
             let gitignoreText = ""
             try {
                 gitignoreText = readFileSync(gitignorePath).toString()
-            } catch (err) {
+            } catch (err: any) {
                 if (err.code != "ENOENT") throw err
             }
             /** Index of the start of our generated text */

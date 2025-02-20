@@ -75,7 +75,7 @@ export class Resource {
                 if (!statSync(path).isDirectory()) {
                     throw new TypeError(`E185 Resource path ${this.path} for resource ${this.id} does not point to a directory`)
                 }
-            } catch (err) {
+            } catch (err: any) {
                 if ("code" in err && err.code == "ENOENT") {
                     throw new TypeError(`E218 Resource path ${this.path} for resource ${this.id} does not point to a directory, in fact the file does not exist`)
                 } else {

@@ -1,10 +1,12 @@
-import { SpawnOptions } from "child_process";
-import { mkdirSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
-import { executeCommand, RunnerError } from "../src/runner";
+import { SpawnOptions } from "child_process"
+import { mkdirSync, writeFileSync } from "fs"
+import { join, resolve } from "path"
+import { executeCommand, RunnerError } from "../src/runner"
+
+export const testFolder = join(__dirname, "test")
 
 let ucpemExec = "ucpem"
-if (process.argv.length > 2) ucpemExec = join(__dirname, "..", process.argv[2])
+if (process.argv.length > 2) ucpemExec = join(testFolder, "..", process.argv[2])
 
 export class TestFail extends Error { }
 
@@ -27,7 +29,7 @@ export const shell = process.env.SHELL || process.env.COMSPEC
 let currentDir = ""
 
 export function __setCurrentDir(dir: string) {
-    currentDir = resolve(__dirname, dir)
+    currentDir = resolve(testFolder, dir)
 }
 
 export function dir(post = "") {

@@ -13,7 +13,7 @@ export async function runScript(args: string[]) {
     const rootProject = (() => {
         try {
             return Project.fromDirectory(CURRENT_PATH)
-        } catch (err) {
+        } catch (err: any) {
             if (err.message.includes("E064")) {
                 return Project.createDummy(CURRENT_PATH)
             } else throw err
@@ -62,7 +62,7 @@ export async function runScript(args: string[]) {
                             } else {
                                 return null
                             }
-                        } catch (err) {
+                        } catch (err: any) {
                             if (err.code == "ENOENT") {
                                 return null
                             } else throw err
@@ -95,7 +95,7 @@ export async function runScript(args: string[]) {
                     rootProject.createPortsFolder()
                     try {
                         mkdirSync(scriptCacheDir)
-                    } catch (err) {
+                    } catch (err: any) {
                         if (err.code != "EEXIST") throw err
                     }
 
@@ -106,7 +106,7 @@ export async function runScript(args: string[]) {
                     try {
                         await executeCommand(`git clone "${source}" "${clonePath}"`, rootProject.path)
                         createSuccessful = true
-                    } catch (err) {
+                    } catch (err: any) {
                         if (!(err instanceof RunnerError)) {
                             throw err
                         } else {

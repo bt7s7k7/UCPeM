@@ -51,7 +51,7 @@ export namespace CopyUtil {
             try {
                 mkdirSync(currentPath)
                 success = true
-            } catch (err) {
+            } catch (err: any) {
                 if (err.code != "EEXIST") throw err
             }
             if (success && !options.quiet) {

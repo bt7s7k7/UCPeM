@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs"
 import { basename, join } from "path"
+import { performance } from "perf_hooks"
 import { Debug } from "../Debug"
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, TS_CONFIG_FILE_NAME } from "../global"
 import { ConfigLoader } from "./ConfigManager"
@@ -18,6 +19,7 @@ export class Project {
     }
 
     public async loadAllPorts(createPortsFolder = false) {
+        const start = performance.now()
         try {
             const installedPorts = readdirSync(this.portFolderPath)
 
@@ -48,6 +50,8 @@ export class Project {
                 }
             } else throw err
         }
+        const end = performance.now()
+        Debug.log("TIME", `Loading ports took: ${(end - start).toFixed(2)}ms`)
     }
 
     public createPortsFolder() {
@@ -72,6 +76,7 @@ export class Project {
     }
 
     static fromDirectory(path: string) {
+        const start = performance.now()
         const tsConfigFilePath = join(path, TS_CONFIG_FILE_NAME)
         Debug.log("PRO", "Trying to get typescript config", tsConfigFilePath)
         if (existsSync(tsConfigFilePath)) {
@@ -80,7 +85,10 @@ export class Project {
 
         const configFilePath = join(path, CONFIG_FILE_NAME)
         Debug.log("PRO", "Trying to get javascript config", configFilePath)
-        return ConfigLoader.parseConfig(configFilePath)
+        const config = ConfigLoader.parseConfig(configFilePath)
+        const end = performance.now()
+        Debug.log("TIME", `Loading project from directory took: ${(end - start).toFixed(2)}ms`)
+        return config
     }
 
     static fromFile(path: string) {

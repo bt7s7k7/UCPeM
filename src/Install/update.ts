@@ -1,5 +1,8 @@
+import chalk from "chalk"
 import { lstatSync, readdirSync, statSync } from "fs"
 import { join } from "path"
+import { performance } from "perf_hooks"
+import { Debug } from "../Debug"
 import { CURRENT_PATH } from "../global"
 import { Project } from "../Project/Project"
 import { executeCommand } from "../runner"
@@ -30,17 +33,26 @@ export async function update(updateLinkedPorts: false | "include local ports" = 
     }
 }
 
-export async function checkChanges() {
-    const project = Project.fromDirectory(CURRENT_PATH)
+export async function checkChanges(project: Project) {
+    const start = performance.now()
     let changeDetected = false
+    const queue: Promise<void>[] = []
     for (const portFolder of _enumerateInstalledPorts(project)) {
-        const fullPath = join(project.portFolderPath, portFolder)
-        if (statSync(fullPath).isDirectory()) {
-            const result = await executeCommand(`git status --porcelain=v1`, fullPath)
-            if (result.trim() != "") {
-                changeDetected = true
+        queue.push((async () => {
+            const fullPath = join(project.portFolderPath, portFolder)
+            if (statSync(fullPath).isDirectory()) {
+                const result = await executeCommand(`git status --porcelain=v1`, fullPath, { quiet: true })
+                if (result.trim() != "") {
+                    changeDetected = true
+                    console.log(`${portFolder}: ${"\n" + result}`)
+                } else {
+                    console.log(chalk.grey(`${portFolder}: No changes`))
+                }
             }
-        }
+        })())
     }
+    await Promise.all(queue)
+    const end = performance.now()
+    Debug.log("TIME", `Update checking took: ${(end - start).toFixed(2)}ms`)
     if (changeDetected) throw new UserError("E079 There are ports with pending changes")
 }

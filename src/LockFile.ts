@@ -1,5 +1,7 @@
 import { readFileSync, writeFileSync } from "fs"
 import { join } from "path"
+import { performance } from "perf_hooks"
+import { Debug } from "./Debug"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { executeCommand } from "./runner"
@@ -37,6 +39,7 @@ export class LockFile {
             }
 
             if (newRef != oldRef) {
+                Debug.log("LOCK", `${JSON.stringify(newRef)} != ${JSON.stringify(oldRef)}`)
                 await callback?.(port, "changed")
                 mismatch = true
                 continue
@@ -51,21 +54,27 @@ export class LockFile {
     ) { }
 
     public static async makeForProject(project: Project) {
+        const start = performance.now()
         const lock = new LockFile(join(project.path, "ucpem.lock"))
         const ports = DependencyTracker.dump().ports
+        const queue: Promise<void>[] = []
         for (const port of Object.values(ports)) {
-            const path = join(project.portFolderPath, port.id)
-            try {
-
-                const ref = await executeCommand("git rev-parse HEAD", path, { quiet: true })
-                lock.entries.set(port.id, ref.trim())
-            } catch (err: any) {
-                if (err.code == "ENOENT") {
-                    throw new UserError(`E075 Project references port "${port.id}", but it is not installed`)
+            queue.push((async () => {
+                const path = join(project.portFolderPath, port.id)
+                try {
+                    const ref = await executeCommand("git rev-parse HEAD", path, { quiet: true })
+                    lock.entries.set(port.id, ref.trim())
+                } catch (err: any) {
+                    if (err.code == "ENOENT") {
+                        throw new UserError(`E075 Project references port "${port.id}", but it is not installed`)
+                    }
+                    throw err
                 }
-                throw err
-            }
+            })())
         }
+        await Promise.all(queue)
+        const end = performance.now()
+        Debug.log("TIME", `Making lockfile from current ports took: ${(end - start).toFixed(2)}ms`)
         return lock
     }
 
@@ -80,6 +89,7 @@ export class LockFile {
     }
 
     public static loadFromFile(path: string) {
+        const start = performance.now()
         try {
             const content = readFileSync(path, { encoding: "utf-8" })
             const lock = new LockFile(path)
@@ -90,6 +100,8 @@ export class LockFile {
                 if (typeof ref != "string") throw new UserError(`E070 Invalid value for "${name}" in lock file "${path}"`)
                 lock.entries.set(name, ref)
             }
+            const end = performance.now()
+            Debug.log("TIME", `Loading lockfile took: ${(end - start).toFixed(2)}ms`)
             return lock
         } catch (err: any) {
             if (err.code == "ENOENT") {

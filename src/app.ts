@@ -107,7 +107,7 @@ if (require.main?.filename == module.filename) {
         "update check": {
             desc: "For every installed port, checks git status to detect any changes",
             async callback() {
-                await checkChanges()
+                await checkChanges(Project.fromDirectory(CURRENT_PATH))
             }
         },
         update: {
@@ -315,16 +315,20 @@ if (require.main?.filename == module.filename) {
             desc: "Checks lock file for mismatches with installed ports",
             async callback(args) {
                 const project = Project.fromDirectory(CURRENT_PATH)
+
                 await project.loadAllPorts()
 
                 const lockFile = LockFile.loadFromProject(project)
-                const newFile = await LockFile.makeForProject(project)
+                const [newFile] = await Promise.all([
+                    LockFile.makeForProject(project),
+                    checkChanges(project)
+                ])
 
                 if (lockFile == null) {
                     throw new UserError("E073 No lockfile found")
                 }
 
-                if (await lockFile.compare(newFile, async (port, change) => {
+                const changed = await lockFile.compare(newFile, async (port, change) => {
                     console.log(`[${change == "added" ? (
                         chalk.greenBright("Added")
                     ) : change == "removed" ? (
@@ -332,7 +336,10 @@ if (require.main?.filename == module.filename) {
                     ) : (
                         chalk.yellowBright("Changed")
                     )}] ${port}`)
-                })) {
+                })
+
+
+                if (changed) {
                     throw new UserError("E072 Lockfile mismatch detected")
                 } else {
                     console.log("Dependency state OK")

@@ -139,9 +139,17 @@ To keep your lockfile up-to-date, you can use a pre-commit hook. An example hook
 
 ```bash
 #!/bin/zsh
+
+# Skip this check if we are rebasing, it is likely we already checked those commits
+if [[ "${GIT_REFLOG_ACTION}" =~ "rebase".*"reword" ]]; then
+    exit 0
+fi
+
+# Remove PREFIX otherwise nvm would complain
 unset PREFIX
+
 source ~/.zshrc
-ucpem update check && ucpem lock check
+ucpem lock check
 ```
 
 ## Installation

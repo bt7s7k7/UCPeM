@@ -125,9 +125,24 @@ You can use `all` as port name to made all installed ports synced if their ports
 
 The global folder is `~/.ucpem` by default but it can be modified with the `UCPEM_LOCAL_PORTS` environmental variable.
 
-By default during `ucpem install`, local ports are used before cloning a remote copy, to install remote ports only run `ucpem install remote`.
+By default during `ucpem install`, local ports are used before cloning a remote copy, to install remote ports only run `ucpem install remote`. You can also use`ucpem install local` to only install local ports and error if any are missing. 
 
 Local linking requires node version `^12.10.0`
+
+## Lock file
+
+To avoid issues caused by breaking changes in dependencies, you can use a lockfile to record commit hashes of all installed ports. If any dependencies evolve to cause errors with your application, UCPeM can then automatically checkout older commits.
+
+Use `ucpem lock update` to record current dependencies and `ucpem lock check` to check for mismatches. If mismatches occur use `ucpem lock apply` to revert to last working version.
+
+To keep your lockfile up-to-date, you can use a pre-commit hook. An example hook is reproduced below. It will prevent commits unless the lockfile is up-to-date. Save it as `.git/hooks/pre-commit` to enable this functionality.
+
+```bash
+#!/bin/zsh
+unset PREFIX
+source ~/.zshrc
+ucpem update check && ucpem lock check
+```
 
 ## Installation
 1. Install from source
@@ -149,10 +164,18 @@ Usage:
 
 Commands:
   info           - Displays information about the current project
+  info json      - Displays all project resources in machine readable JSON format
+  info brief     - Displays all project resources
   install        - Installs all missing ports
   install remote - Install all missing ports without using local ports
+  install local  - Install all missing ports without using local ports
   prepare        - Runs prepare scripts for all resources
+  update all     - Updates all installed ports, including local linked
+  update check   - For every installed port, checks git status to detect any changes
   update         - Updates all installed ports
+  link resolve   - Changes links into real folders
+  link clean     - Deletes all created links
+  link unresolve - Reverts changes made by `link resolve`
   link           - Links dependencies to resources
   init           - Creates a ucpem project
   sync           - Publishes this project for local linking
@@ -160,5 +183,12 @@ Commands:
   sync with      - Syncs with a port that was published for local linking :: Arguments: <name>
   unsync with    - Removes a local linked port that was synced with :: Arguments: <name>
   run            - Runs a run script :: Arguments: <name> (...)
+  add to bin     - Copies self to "node_modules/.bin" so it can be used with yarn, use thins when doing a curl install, only use with single file builds
+  alias          - Create shorthand alias for a command :: Arguments: <name> <command...>
+  unalias        - Remove alias :: Arguments: <name>
+  paths          - Prints all system paths used by SMWA
+  lock update    - Updates lock file to match installed ports
+  lock check     - Checks lock file for mismatches with installed ports
+  lock apply     - Applies lockfile refs to installed ports
 ```
 Run `ucpem` without arguments to view help.

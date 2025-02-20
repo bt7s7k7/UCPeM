@@ -62,8 +62,10 @@ export class LockFile {
             queue.push((async () => {
                 const path = join(project.portFolderPath, port.id)
                 try {
-                    const ref = await executeCommand("git rev-parse HEAD", path, { quiet: true })
-                    lock.entries.set(port.id, ref.trim())
+                    const result = await executeCommand("git rev-parse HEAD", path, { quiet: true })
+                    const ref = result.trim()
+                    if (ref == "") throw new Error(`Git ref is empty??? at ${path}`)
+                    lock.entries.set(port.id, ref)
                 } catch (err: any) {
                     if (err.code == "ENOENT") {
                         throw new UserError(`E075 Project references port "${port.id}", but it is not installed`)

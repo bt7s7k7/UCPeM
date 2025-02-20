@@ -7,7 +7,7 @@
         "build": "tsc --incremental && npm run buildConfigTypedef",
         "dist": "yarn run build && node build/app.js run dist",
         "watch": "tsc --watch",
-        "test-release": "npm run build && node build/app.js run dist && ucpem run test ./dist/index.js",
+        "test-release": "npm run build && node build/app.js run dist && ucpem run test ./pkg-ucpem/index.cjs",
         "test": "npm run build && npm link --force && ucpem run test",
         "buildConfigTypedef": "node build/configTypedefBuilder.js",
         "typedef": "node build/configTypedefBuilder.js"

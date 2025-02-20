@@ -1,7 +1,7 @@
 import { fail } from "assert"
 import { supportsColor } from "chalk"
-import { lstatSync, statSync, writeFileSync } from "fs"
-import { dir, git, includes, notIncludes, run, TestCase, TestFail } from "./testAPI"
+import { lstatSync, readFileSync, statSync, writeFileSync } from "fs"
+import { dir, git, includes, notIncludes, removeANSI, run, TestCase, TestFail } from "./testAPI"
 
 const runnerSettings = () => ({ env: { ...process.env, UCPEM_LOCAL_PORTS: dir(".ucpem"), FORCE_COLOR: supportsColor ? "1" : "0" } })
 
@@ -1182,10 +1182,192 @@ export const cases: Record<string, TestCase> = {
             includes(await run(`ucpem run run-self`, "./project"), "__WORKS_2")
         }
     },
-    "Sould": {
-        structure: {},
-        async callback() {
+    "Should create lockfile": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
 
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    ".gitkeep": ""
+                }
+            }
         },
-    }
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port", { stdio: "ignore" })
+            await run(`ucpem install`, "./project")
+            await run(`ucpem lock update`, "./project")
+            try {
+                statSync(dir("./project/ucpem.lock"))
+                includes(readFileSync(dir("./project/ucpem.lock"), { encoding: "utf-8" }), "port")
+            } catch (err: any) {
+                throw new TestFail(err.message)
+            }
+            includes(await run(`ucpem lock check`, "./project"), "state OK")
+        }
+    },
+    "Should update lockfile": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    ".gitkeep": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`ucpem sync`, "./port", runnerSettings())
+            await run(`ucpem install local`, "./project", runnerSettings())
+            await run(`ucpem lock update`, "./project")
+            writeFileSync(dir("./port/dependency/file.txt"), "data")
+            await run(`git add . && git commit -m "Added data"`, "./port")
+            await run(`ucpem lock update`, "./project")
+            await run(`ucpem lock check`, "./project")
+        }
+    },
+    "Should detect lockfile mismatch": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    const port = git("../port")
+
+                    project.res("resource",
+                        port.res("dependency")
+                    )
+                `,
+                "resource": {}
+            },
+            "port": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependency")
+                `,
+                "dependency": {
+                    ".gitkeep": ""
+                }
+            }
+        },
+        shouldFail: "error code 72",
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./port")
+            await run(`ucpem sync`, "./port", runnerSettings())
+            await run(`ucpem install local`, "./project", runnerSettings())
+            await run(`ucpem lock update`, "./project")
+            writeFileSync(dir("./port/dependency/file.txt"), "data")
+            await run(`git add . && git commit -m "Added data"`, "./port")
+            await run(`ucpem lock check`, "./project")
+        }
+    },
+    "Should apply lockfile": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    project.res("resource",
+                        git("../portA").res("dependencyA"),
+                    )
+                `,
+                "resource": {}
+            },
+            "portA": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependencyA")
+                `,
+                "dependencyA": {
+                    ".gitkeep": ""
+                }
+            },
+            "portB": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("dependencyB")
+                `,
+                "dependencyB": {
+                    ".gitkeep": ""
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./portA")
+            await run(`ucpem sync`, "./portA", runnerSettings())
+
+            await run(`git add . && git commit -m "Initial commit"`, "./portB")
+            await run(`ucpem sync`, "./portB", runnerSettings())
+
+            await run(`ucpem install local`, "./project", runnerSettings())
+
+            await run(`ucpem lock update`, "./project")
+
+            writeFileSync(dir("./portA/dependencyA/file.txt"), "data")
+            await run(`git add . && git commit -m "Added data"`, "./portA")
+            writeFileSync(dir("./project/ucpem.js"), `
+                const { project, git } = require("ucpem")
+
+                project.res("resource",
+                    git("../portA").res("dependencyA"),
+                    git("../portB").res("dependencyB"),
+                )
+            `)
+            await run(`ucpem install local`, "./project", runnerSettings())
+
+            const result = removeANSI(await run(`ucpem lock apply`, "./project"))
+            includes(result, "[Checkout] portA")
+            includes(result, "[Remove] portB")
+
+            try {
+                statSync(dir("./project/dependencyA/file.txt"))
+                statSync(dir("./project/dependencyB"))
+                fail("Detected files that should have been removed")
+            } catch (err: any) {
+                if (err.code != "ENOENT") throw new TestFail(err.message)
+            }
+        }
+    },
 }

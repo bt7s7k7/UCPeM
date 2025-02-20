@@ -37,6 +37,11 @@ export function dir(post = "") {
 }
 
 export function fail(reason: string) { throw new TestFail(reason) }
+
+export function removeANSI(text: string) {
+    return text.replace(/\x1b\[\d*\w/g, "")
+}
+
 export function includes(text: string, substr: string) {
     if (!text.includes(substr)) {
         fail(`Text does not include "${substr}"`)

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "fs"
-import { relative } from "path"
+import { rm } from "fs/promises"
+import { join, relative } from "path"
 import "source-map-support/register"
 import { inspect } from "util"
 import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
@@ -13,6 +14,7 @@ import { linkResources } from "./Install/link"
 import { preparePrepare } from "./Install/prepare"
 import { checkChanges, update } from "./Install/update"
 import { LocalLinker } from "./LocalLinker"
+import { LockFile } from "./LockFile"
 import { ConfigLoader } from "./Project/ConfigManager"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
@@ -21,6 +23,7 @@ import { LinkHistory } from "./Project/link"
 import { UserError } from "./UserError"
 import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state, TS_CONFIG_FILE_NAME } from "./global"
 import { runScript } from "./runScript"
+import { executeCommand } from "./runner"
 
 module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
 
@@ -297,7 +300,73 @@ if (require.main?.filename == module.filename) {
                 console.log("Local ports: " + LOCAL_PORTS_PATH)
                 console.log("Alias config: " + ALIAS_FILE_PATH)
             },
-        }
+        },
+        "lock update": {
+            desc: "Updates lock file to match installed ports",
+            async callback(args) {
+                const project = Project.fromDirectory(CURRENT_PATH)
+                await project.loadAllPorts()
+
+                const newFile = await LockFile.makeForProject(project)
+                newFile.save()
+            },
+        },
+        "lock check": {
+            desc: "Checks lock file for mismatches with installed ports",
+            async callback(args) {
+                const project = Project.fromDirectory(CURRENT_PATH)
+                await project.loadAllPorts()
+
+                const lockFile = LockFile.loadFromProject(project)
+                const newFile = await LockFile.makeForProject(project)
+
+                if (lockFile == null) {
+                    throw new UserError("E073 No lockfile found")
+                }
+
+                if (await lockFile.compare(newFile, async (port, change) => {
+                    console.log(`[${change == "added" ? (
+                        chalk.greenBright("Added")
+                    ) : change == "removed" ? (
+                        chalk.redBright("Removed")
+                    ) : (
+                        chalk.yellowBright("Changed")
+                    )}] ${port}`)
+                })) {
+                    throw new UserError("E072 Lockfile mismatch detected")
+                } else {
+                    console.log("Dependency state OK")
+                }
+            },
+        },
+        "lock apply": {
+            desc: "Applies lockfile refs to installed ports",
+            async callback(args) {
+                const project = Project.fromDirectory(CURRENT_PATH)
+                await project.loadAllPorts()
+
+                const lockFile = LockFile.loadFromProject(project)
+                const newFile = await LockFile.makeForProject(project)
+
+                if (lockFile == null) {
+                    throw new UserError("E073 No lockfile found")
+                }
+
+                await lockFile.compare(newFile, async (port, change) => {
+                    const path = join(project.portFolderPath, port)
+                    if (change == "added") {
+                        console.log(`[${chalk.redBright("Remove")}] ${port}`)
+                        await rm(path, { recursive: true, force: true })
+                    } else if (change == "changed") {
+                        const commit = lockFile.entries.get(port)!
+                        console.log(`[${chalk.yellowBright("Checkout")}] ${port} (${commit})`)
+                        await executeCommand(`git -c advice.detachedHead=false checkout ${commit}`, path)
+                    } else if (change == "removed") {
+                        throw new UserError(`E074 Additional port contained in lockfile (${port}), manually execute install command`)
+                    }
+                })
+            },
+        },
     })
 
     cli.setFallback({

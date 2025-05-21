@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readdirSync, Stats, statSync, unlinkSync } from "fs"
-import { basename, join } from "path"
+import { existsSync, mkdirSync, readdirSync, Stats, statSync, unlinkSync, writeFileSync } from "fs"
+import { basename, dirname, join } from "path"
 import { performance } from "perf_hooks"
 import { Debug } from "../Debug"
 import { CONFIG_FILE_NAME, PORT_FOLDER_NAME, TS_CONFIG_FILE_NAME } from "../global"
@@ -59,6 +59,10 @@ export class Project {
             mkdirSync(this.portFolderPath)
         } catch (err: any) {
             if (err.code != "EEXIST") throw err
+        }
+
+        if (existsSync(join(dirname(this.portFolderPath), "project.godot"))) {
+            writeFileSync(join(this.portFolderPath, ".gdignore"), "")
         }
     }
 

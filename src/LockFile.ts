@@ -61,16 +61,29 @@ export class LockFile {
         for (const port of Object.values(ports)) {
             queue.push((async () => {
                 const path = join(project.portFolderPath, port.id)
-                try {
-                    const result = await executeCommand("git rev-parse HEAD", path, { quiet: true })
-                    const ref = result.trim()
-                    if (ref == "") throw new Error(`Git ref is empty??? at ${path}`)
-                    lock.entries.set(port.id, ref)
-                } catch (err: any) {
-                    if (err.code == "ENOENT") {
-                        throw new UserError(`E075 Project references port "${port.id}", but it is not installed`)
+                let attemptCount = 0
+                while (true) {
+                    try {
+                        const result = await executeCommand("git rev-parse HEAD", path, { quiet: true })
+                        const ref = result.trim()
+                        if (ref == "") {
+                            if (attemptCount > 10) {
+                                throw new Error(`Git ref is empty??? at ${path}`)
+                            } else {
+                                attemptCount++
+                                await new Promise(resolve => setTimeout(resolve, 100))
+                                continue
+                            }
+                        }
+                        lock.entries.set(port.id, ref)
+                    } catch (err: any) {
+                        if (err.code == "ENOENT") {
+                            throw new UserError(`E075 Project references port "${port.id}", but it is not installed`)
+                        }
+                        throw err
                     }
-                    throw err
+
+                    break
                 }
             })())
         }

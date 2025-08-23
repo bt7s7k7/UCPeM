@@ -1,7 +1,9 @@
 import { dirname, join } from "path"
+import { Debug } from "../Debug"
 import { ConfigAPI } from "./ConfigAPI"
 import { PrepareScript } from "./PrepareScript"
 import { Resource } from "./Resource"
+import { parseResourceID } from "./util"
 
 export class ResourceBuilder {
     protected dependencies = new Set<string>()
@@ -14,7 +16,20 @@ export class ResourceBuilder {
     }
 
     public build() {
-        return new Resource(this.id, this.path, [...this.dependencies], this.prepare, this.internal)
+        let pathOffset: string | null = null
+
+        if (this.id.includes(".")) {
+            const { resourceName } = parseResourceID(this.id)
+            const prefix = resourceName.split(".")
+
+            if (prefix.length > 0) {
+                pathOffset = "../" + prefix.join("/")
+            }
+
+            Debug.log("RES", "Parsing resource path offset: ", this.id, prefix, " = ", pathOffset)
+        }
+
+        return new Resource(this.id, this.path, pathOffset, [...this.dependencies], this.prepare, this.internal)
     }
 
     public setPath(newPath: string) {

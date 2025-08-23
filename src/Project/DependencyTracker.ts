@@ -205,7 +205,7 @@ export const DependencyTracker = new class DependencyTracker {
         for (const resource of Object.values(this.resourceIndex)) {
             resources.set(resource.id, {
                 id: resource.id, dependencies: [...resource.dependencies], internal: resource.internal, isScript: resource.isScript,
-                path: resource.path, portName: resource.portName, resourceName: resource.resourceName, scriptName: resource.scriptName
+                path: resource.path, pathOffset: resource.pathOffset, portName: resource.portName, resourceName: resource.resourceName, scriptName: resource.scriptName
             })
         }
 

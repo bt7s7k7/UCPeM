@@ -1,6 +1,6 @@
 import chalk from "chalk"
-import { statSync } from "fs"
-import { basename, join } from "path"
+import { mkdirSync, statSync } from "fs"
+import { basename, join, relative } from "path"
 import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator"
 import { SCRIPT_RES_PREFIX } from "../global"
 import { DependencyTracker } from "./DependencyTracker"
@@ -37,12 +37,23 @@ export class Resource {
         if (this.isScript) return
 
         if (resource != this) {
+
             const linkName = basename(this.path)
             const linkDir = join(resource.path, "..")
-            const linkPath = join(linkDir, linkName)
+
+            let linkTarget = this.path
+            let linkPath = join(linkDir, linkName)
+
+            if (this.pathOffset != null) {
+                linkPath = join(linkPath, this.pathOffset)
+                linkTarget = join(linkTarget, this.pathOffset)
+
+                mkdirSync(basename(linkPath), { recursive: true })
+            }
+
             if (linkPath != this.path) {
-                link(this.path, linkPath)
-                GitIgnoreGenerator.addIgnore(linkDir, linkName)
+                link(linkTarget, linkPath)
+                GitIgnoreGenerator.addIgnore(linkDir, relative(linkDir, linkPath))
             }
         }
 
@@ -56,6 +67,7 @@ export class Resource {
     constructor(
         public readonly id: string,
         public readonly path: string,
+        public readonly pathOffset: string | null,
         public readonly dependencies: Readonly<string[]>,
         public readonly prepare: PrepareScript | null,
         public readonly internal: boolean,
@@ -71,11 +83,17 @@ export class Resource {
         }
 
         if (!internal && !this.isScript) {
+            let queryPath = this.path
+
+            if (this.pathOffset != null) {
+                queryPath = join(queryPath, this.pathOffset)
+            }
+
             try {
-                statSync(path)
+                statSync(queryPath)
             } catch (err: any) {
                 if ("code" in err && err.code == "ENOENT") {
-                    throw new TypeError(`E218 Resource path ${this.path} for resource ${this.id} does not point to a directory, in fact the file does not exist`)
+                    throw new TypeError(`E218 Resource path ${queryPath} for resource ${this.id} does not point to a directory, in fact the file does not exist`)
                 } else {
                     throw err
                 }

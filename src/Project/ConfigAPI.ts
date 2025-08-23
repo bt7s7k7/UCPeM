@@ -60,6 +60,7 @@ export namespace ConfigAPI {
         export interface Resource {
             id: string
             path: string
+            pathOffset: string | null
             dependencies: string[]
             internal: boolean
             portName: string

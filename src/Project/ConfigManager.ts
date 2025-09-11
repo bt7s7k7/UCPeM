@@ -63,7 +63,20 @@ export namespace ConfigLoader {
             sourcemap: "inline",
             platform: "node",
             sourcefile: path,
-            loader: "ts"
+            loader: "ts",
+            tsconfigRaw: {
+                compilerOptions: {
+                    target: "ESNext",
+                    module: "ESNext",
+                    moduleResolution: "node",
+                    strict: true,
+                    esModuleInterop: true,
+                    lib: [
+                        "ESNext",
+                    ],
+                    useDefineForClassFields: false,
+                }
+            }
         })
 
         return result.code + "\n//# sourceURL=file://" + path

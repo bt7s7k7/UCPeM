@@ -2,10 +2,11 @@ import { mkdirSync, readdirSync, rmSync } from "fs"
 import { join } from "path"
 import { CLI, Command } from "./CLI"
 import { Debug } from "./Debug"
-import { CURRENT_PATH, GITHUB_PREFIX, LOCAL_PORTS_PATH, RUN_SCRIPT_CACHE } from "./global"
+import { CURRENT_PATH, LOCAL_PORTS_PATH, RUN_SCRIPT_CACHE } from "./global"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
 import { parseNameFromPath, processClonePath } from "./Project/util"
+import { resolveGitHubUrl } from "./resolveGitHubUrl"
 import { executeCommand, RunnerError } from "./runner"
 import { UserError } from "./UserError"
 
@@ -45,7 +46,7 @@ export async function runScript(args: string[]) {
                     return rootProject
                 } else {
                     if (source[0] == "@") {
-                        source = GITHUB_PREFIX + source.substr(1)
+                        source = resolveGitHubUrl(source.substr(1))
                     }
 
                     if (source == rootProject.path) return rootProject

@@ -7,7 +7,6 @@ export const TS_CONFIG_FILE_NAME = "ucpem.ts"
 export const GITIGNORE_SECTION_BEGIN = "# UCPeM generated, write above to not be overwritten"
 export const CURRENT_PATH = process.cwd()
 export const RUN_SCRIPT_CACHE = ".run"
-export const GITHUB_PREFIX = "https://github.com/"
 export const SCRIPT_RES_PREFIX = "<SCRIPT>"
 
 export const LOCAL_PORTS_PATH = process.env.UCPEM_LOCAL_PORTS ?? join(homedir(), ".ucpem")

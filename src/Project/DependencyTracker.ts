@@ -1,5 +1,5 @@
 import { Debug } from "../Debug"
-import { GITHUB_PREFIX } from "../global"
+import { resolveGitHubUrl } from "../resolveGitHubUrl"
 import { ConfigAPI } from "./ConfigAPI"
 import { Project } from "./Project"
 import { Resource } from "./Resource"
@@ -40,7 +40,7 @@ export const DependencyTracker = new class DependencyTracker {
     }
 
     public addGithubPort(source: string) {
-        return this.addPort(GITHUB_PREFIX + source)
+        return this.addPort(resolveGitHubUrl(source))
     }
 
     public addResource(resource: Resource) {

@@ -137,5 +137,15 @@ export namespace ConfigAPI {
             /** Name of the project this port is being installed into */
             readonly installName: string
         }
+
+        /** API for triggering and customizing the loading of code */
+        externalModule: {
+            /** Declares a module that can be imported from loaded files */
+            createGlobalModule(name: string, exports: any): void
+            /** Executes a file and returns its exports */
+            load(path: string): any
+            /** Executes a file and returns its exports; the included file will have access to the current `ucpem` module. */
+            include(path: string): any
+        }
     }
 }

@@ -2,7 +2,7 @@
 import chalk from "chalk"
 import { appendFileSync, copyFileSync, mkdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "fs"
 import { rm } from "fs/promises"
-import { join, relative } from "path"
+import { dirname, join, relative, resolve } from "path"
 import "source-map-support/register"
 import { inspect } from "util"
 import { ALIAS_FILE_PATH, AliasManager } from "./AliasManager"
@@ -18,14 +18,13 @@ import { LockFile } from "./LockFile"
 import { ConfigLoader } from "./Project/ConfigManager"
 import { DependencyTracker } from "./Project/DependencyTracker"
 import { Project } from "./Project/Project"
-import { ProjectBuilder } from "./Project/ProjectBuilder"
 import { LinkHistory } from "./Project/link"
 import { UserError } from "./UserError"
 import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, state, TS_CONFIG_FILE_NAME } from "./global"
 import { runScript } from "./runScript"
 import { executeCommand } from "./runner"
 
-module.exports = ConfigLoader.createApi(process.cwd(), new ProjectBuilder(process.cwd()), {}, "normal")
+module.exports = ConfigLoader.createApi(process.cwd(), null, {}, "normal", new Map())
 
 Debug.log("___", "Initializing UCPeM")
 
@@ -374,6 +373,14 @@ if (require.main?.filename == module.filename) {
                 })
             },
         },
+        "exec": {
+            desc: "Executes a JavaScript or TypeScript file :: Arguments: <path>",
+            argc: 1,
+            async callback([path]) {
+                path = resolve(path)
+                ConfigLoader.loadConfigFile(path, dirname(path), null, "normal")
+            },
+        }
     })
 
     cli.setFallback({

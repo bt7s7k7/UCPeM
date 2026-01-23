@@ -18,6 +18,8 @@ import { makeResourceID, parseResourceID } from "./util"
 
 let anonId = 0
 
+const globalModules = new Map<string, any>()
+
 class OrphanedConfigError extends Error { }
 
 function findMainConfig(path: string) {
@@ -132,7 +134,18 @@ export namespace ConfigLoader {
 
             if (id.startsWith(".") && extname(id) == "") {
                 const tsFile = id + ".ts"
-                const fullPath = resolve(dirPath, tsFile)
+                let fullPath = resolve(dirPath, tsFile)
+
+                if (existsSync(fullPath)) {
+                    const cached = moduleCache.get(fullPath)
+                    if (cached) return cached
+                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api, moduleCache)
+                    moduleCache.set(fullPath, module)
+                    return module
+                }
+
+                const indexTs = id + "/index.ts"
+                fullPath = resolve(dirPath, indexTs)
 
                 if (existsSync(fullPath)) {
                     const cached = moduleCache.get(fullPath)
@@ -143,14 +156,17 @@ export namespace ConfigLoader {
                 }
             }
 
+            const globalModule = globalModules.get(id)
+            if (globalModule) return globalModule
+
             return scriptRequireBase(id)
         }
 
         return scriptRequire
     }
 
-    export function createApi(dirPath: string, projectBuilder: ProjectBuilder, createdResources: Record<string, ConfigAPI.Resource>, configType: "child" | "normal") {
-        const offset = relative(projectBuilder.path, dirPath)
+    export function createApi(dirPath: string, projectBuilder: ProjectBuilder | null, createdResources: Record<string, ConfigAPI.Resource>, configType: "child" | "normal", moduleCache: Map<string, any>) {
+        const offset = projectBuilder == null ? dirPath : relative(projectBuilder.path, dirPath)
 
         const constants: ConfigAPI.API["constants"] = {
             installName: "",
@@ -236,6 +252,8 @@ export namespace ConfigLoader {
                 return await executeCommand("node " + (require.main?.filename ?? __filename) + " " + command, cwd)
             },
             include(path) {
+                if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                 const target = join(dirPath, path)
 
                 const ret = loadConfigFile(target, dirname(target), projectBuilder, "child")
@@ -255,9 +273,13 @@ export namespace ConfigLoader {
             project: {
                 path: dirPath,
                 prefix(prefix) {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     return { ...this, path: join(this.path, prefix) }
                 },
                 res(name, ...mods) {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     const id = makeResourceID(projectBuilder.name, name)
                     const resourceBuilder = new ResourceBuilder(id, join(this.path, name), offset, constants)
 
@@ -277,6 +299,8 @@ export namespace ConfigLoader {
                     return createdResource
                 },
                 use(...dep: (ConfigAPI.Dependency | ConfigAPI.ScriptRef)[]) {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     const name = `__${anonId++}`
                     this.res(name, ...dep, api.internal())
                     for (const dependency of dep) {
@@ -287,6 +311,8 @@ export namespace ConfigLoader {
                     }
                 },
                 script(name, callback, options = { desc: "-no description provided-" }) {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     const script = new RunScript(callback, constants, name, offset, options)
                     DependencyTracker.addRunScript(projectBuilder.name, name, script)
                     projectBuilder.addRunScript(script)
@@ -294,11 +320,26 @@ export namespace ConfigLoader {
                     return makeScriptRef(resource, dirPath, name)
                 },
                 ref(name) {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     return makePort(projectBuilder.name).res(name)
                 },
                 isChild() {
+                    if (projectBuilder == null) throw new Error("Cannot use Project API when directly executing files")
+
                     if (configType == "normal") throw new OrphanedConfigError()
                 }
+            },
+            externalModule: {
+                createGlobalModule(name, exports) {
+                    globalModules.set(name, exports)
+                },
+                load(path) {
+                    return loadCustomFile(path, dirname(path), null, "normal", moduleCache)
+                },
+                include(path) {
+                    return executeModule(path, readFileSync(path).toString(), api, moduleCache)
+                },
             }
         }
 
@@ -307,7 +348,7 @@ export namespace ConfigLoader {
         return api
     }
 
-    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder, configType: "child" | "normal") {
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
         let configText: string
         try {
             configText = readFileSync(path).toString()
@@ -317,12 +358,9 @@ export namespace ConfigLoader {
         }
 
         const createdResources: Record<string, ConfigAPI.Resource> = {}
-        const api = createApi(dirPath, projectBuilder, createdResources, configType)
-
-        const moduleCache = new Map<string, any>()
 
         try {
-            executeModule(path, configText, api, moduleCache)
+            prepareAndExecute(path, dirPath, createdResources, configText, projectBuilder, configType, moduleCache)
         } catch (err: any) {
             if (err instanceof OrphanedConfigError) return "orphaned"
 
@@ -330,5 +368,19 @@ export namespace ConfigLoader {
         }
 
         return createdResources
+    }
+
+    export function loadCustomFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
+        let configText: string
+        configText = readFileSync(path).toString()
+
+        return prepareAndExecute(path, dirPath, {}, configText, projectBuilder, configType, moduleCache)
+    }
+
+    export function prepareAndExecute(path: string, dirPath: string, createdResources: Record<string, ConfigAPI.Resource>, configText: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
+        const api = createApi(dirPath, projectBuilder, createdResources, configType, moduleCache)
+
+        return executeModule(path, configText, api, moduleCache)
+
     }
 }

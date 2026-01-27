@@ -24,7 +24,7 @@ import { CONFIG_FILE_NAME, CURRENT_PATH, LOCAL_PORTS_PATH, PORT_FOLDER_NAME, sta
 import { runScript } from "./runScript"
 import { executeCommand } from "./runner"
 
-module.exports = ConfigLoader.createApi(process.cwd(), null, {}, "normal", new Map())
+module.exports = ConfigLoader.createApi(process.cwd(), null, {}, "normal")
 
 Debug.log("___", "Initializing UCPeM")
 

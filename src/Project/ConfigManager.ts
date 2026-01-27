@@ -19,6 +19,7 @@ import { makeResourceID, parseResourceID } from "./util"
 let anonId = 0
 
 const globalModules = new Map<string, any>()
+const moduleCache = new Map<string, any>()
 
 class OrphanedConfigError extends Error { }
 
@@ -90,8 +91,8 @@ export namespace ConfigLoader {
         return new Function("require", "__dirname", "module", transformSource(path, text) + "\n") as (require: ScriptRequire, __dirname: string, module: NodeJS.Module) => void
     }
 
-    export function executeModule(path: string, text: string, api: ConfigAPI.API, moduleCache: Map<string, any>) {
-        const scriptRequire = createScriptRequire(path, api, moduleCache)
+    export function executeModule(path: string, text: string, api: ConfigAPI.API) {
+        const scriptRequire = createScriptRequire(path, api)
 
         const module: NodeJS.Module = {
             id: path,
@@ -112,7 +113,7 @@ export namespace ConfigLoader {
         return module.exports
     }
 
-    export function createScriptRequire(path: string, api: ConfigAPI.API, moduleCache: Map<string, any>) {
+    export function createScriptRequire(path: string, api: ConfigAPI.API) {
         const dirPath = dirname(path)
 
         const scriptRequireBase = createRequire(path)
@@ -139,7 +140,7 @@ export namespace ConfigLoader {
                 if (existsSync(fullPath)) {
                     const cached = moduleCache.get(fullPath)
                     if (cached) return cached
-                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api, moduleCache)
+                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api)
                     moduleCache.set(fullPath, module)
                     return module
                 }
@@ -150,7 +151,7 @@ export namespace ConfigLoader {
                 if (existsSync(fullPath)) {
                     const cached = moduleCache.get(fullPath)
                     if (cached) return cached
-                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api, moduleCache)
+                    const module = executeModule(fullPath, readFileSync(fullPath).toString(), api)
                     moduleCache.set(fullPath, module)
                     return module
                 }
@@ -165,7 +166,7 @@ export namespace ConfigLoader {
         return scriptRequire
     }
 
-    export function createApi(dirPath: string, projectBuilder: ProjectBuilder | null, createdResources: Record<string, ConfigAPI.Resource>, configType: "child" | "normal", moduleCache: Map<string, any>) {
+    export function createApi(dirPath: string, projectBuilder: ProjectBuilder | null, createdResources: Record<string, ConfigAPI.Resource>, configType: "child" | "normal") {
         const offset = projectBuilder == null ? dirPath : relative(projectBuilder.path, dirPath)
 
         const constants: ConfigAPI.API["constants"] = {
@@ -335,10 +336,10 @@ export namespace ConfigLoader {
                     globalModules.set(name, exports)
                 },
                 load(path) {
-                    return loadCustomFile(path, dirname(path), null, "normal", moduleCache)
+                    return loadCustomFile(path, dirname(path), null, "normal")
                 },
                 include(path) {
-                    return executeModule(path, readFileSync(path).toString(), api, moduleCache)
+                    return executeModule(path, readFileSync(path).toString(), api)
                 },
             }
         }
@@ -348,7 +349,7 @@ export namespace ConfigLoader {
         return api
     }
 
-    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
+    export function loadConfigFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal") {
         let configText: string
         try {
             configText = readFileSync(path).toString()
@@ -360,7 +361,7 @@ export namespace ConfigLoader {
         const createdResources: Record<string, ConfigAPI.Resource> = {}
 
         try {
-            prepareAndExecute(path, dirPath, createdResources, configText, projectBuilder, configType, moduleCache)
+            prepareAndExecute(path, dirPath, createdResources, configText, projectBuilder, configType)
         } catch (err: any) {
             if (err instanceof OrphanedConfigError) return "orphaned"
 
@@ -370,17 +371,17 @@ export namespace ConfigLoader {
         return createdResources
     }
 
-    export function loadCustomFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
+    export function loadCustomFile(path: string, dirPath: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal") {
         let configText: string
         configText = readFileSync(path).toString()
 
-        return prepareAndExecute(path, dirPath, {}, configText, projectBuilder, configType, moduleCache)
+        return prepareAndExecute(path, dirPath, {}, configText, projectBuilder, configType)
     }
 
-    export function prepareAndExecute(path: string, dirPath: string, createdResources: Record<string, ConfigAPI.Resource>, configText: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal", moduleCache: Map<string, any> = new Map<string, any>) {
-        const api = createApi(dirPath, projectBuilder, createdResources, configType, moduleCache)
+    export function prepareAndExecute(path: string, dirPath: string, createdResources: Record<string, ConfigAPI.Resource>, configText: string, projectBuilder: ProjectBuilder | null, configType: "child" | "normal") {
+        const api = createApi(dirPath, projectBuilder, createdResources, configType)
 
-        return executeModule(path, configText, api, moduleCache)
+        return executeModule(path, configText, api)
 
     }
 }

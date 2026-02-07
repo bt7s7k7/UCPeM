@@ -88,7 +88,7 @@ export namespace ConfigLoader {
     export type ScriptRequire = (id: string, options?: { rewrite?: boolean }) => any
 
     export function loadModule(path: string, text: string) {
-        return new Function("require", "__dirname", "module", transformSource(path, text) + "\n") as (require: ScriptRequire, __dirname: string, module: NodeJS.Module) => void
+        return new Function("require", "__dirname", "__filename", "module", transformSource(path, text) + "\n") as (require: ScriptRequire, __dirname: string, __filename: string, module: NodeJS.Module) => void
     }
 
     export function executeModule(path: string, text: string, api: ConfigAPI.API) {
@@ -108,7 +108,7 @@ export namespace ConfigLoader {
         }
 
         const moduleFactory = loadModule(path, text)
-        moduleFactory(scriptRequire, module.path, module)
+        moduleFactory(scriptRequire, module.path, path, module)
 
         return module.exports
     }

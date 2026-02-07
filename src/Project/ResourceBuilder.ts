@@ -1,3 +1,4 @@
+import { existsSync } from "fs"
 import { dirname, join } from "path"
 import { Debug } from "../Debug"
 import { ConfigAPI } from "./ConfigAPI"
@@ -18,7 +19,14 @@ export class ResourceBuilder {
     public build() {
         let pathOffset: string | null = null
 
-        if (this.id.includes(".")) {
+        // For resource names, we have to support both Java packages and compiled files (e.g.
+        // `.dll`) files which may include the '.' character in their names, but it should be
+        // interpreted in two separate ways: 1) as part of a filename and 2) as a directory
+        // separator for Java packages. To determine which of these options to use, we simply check
+        // the existence of the file in option (1) and if that file does not exists, we interpret it
+        // as option (2).
+
+        if (this.id.includes(".") && !existsSync(this.path)) {
             const { resourceName } = parseResourceID(this.id)
             const prefix = resourceName.split(".")
 

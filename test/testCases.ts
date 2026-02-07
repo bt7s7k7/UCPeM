@@ -1370,4 +1370,51 @@ export const cases: Record<string, TestCase> = {
             }
         }
     },
+    "Should handle both Java packages and .dll files": {
+        structure: {
+            "project": {
+                git,
+                "ucpem.js": `
+                    const { project, git } = require("ucpem")
+
+                    project.res("resource",
+                        git("../portA").res("Example.Module.dll"),
+                        git("../portB").res("example.module"),
+                    )
+                `,
+                "resource": {}
+            },
+            "portA": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("Example.Module.dll")
+                `,
+                "Example.Module.dll": ""
+            },
+            "portB": {
+                git,
+                "ucpem.js": `
+                    const { project } = require("ucpem")
+
+                    project.res("example.module")
+                `,
+                "example": {
+                    "module": {
+                        "Main.java": ""
+                    }
+                }
+            }
+        },
+        async callback() {
+            await run(`git add . && git commit -m "Initial commit"`, "./portA")
+            await run(`ucpem sync`, "./portA", runnerSettings())
+
+            await run(`git add . && git commit -m "Initial commit"`, "./portB")
+            await run(`ucpem sync`, "./portB", runnerSettings())
+
+            await run(`ucpem install local`, "./project", runnerSettings())
+        }
+    },
 }

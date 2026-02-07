@@ -1,6 +1,6 @@
 import chalk from "chalk"
 import { mkdirSync, statSync } from "fs"
-import { basename, join, relative } from "path"
+import { basename, dirname, join, relative } from "path"
 import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator"
 import { SCRIPT_RES_PREFIX } from "../global"
 import { DependencyTracker } from "./DependencyTracker"
@@ -37,7 +37,6 @@ export class Resource {
         if (this.isScript) return
 
         if (resource != this) {
-
             const linkName = basename(this.path)
             const linkDir = join(resource.path, "..")
 
@@ -48,7 +47,7 @@ export class Resource {
                 linkPath = join(linkPath, this.pathOffset)
                 linkTarget = join(linkTarget, this.pathOffset)
 
-                mkdirSync(basename(linkPath), { recursive: true })
+                mkdirSync(dirname(linkPath), { recursive: true })
             }
 
             if (linkPath != this.path) {

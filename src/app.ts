@@ -374,10 +374,11 @@ if (require.main?.filename == module.filename) {
             },
         },
         "exec": {
-            desc: "Executes a JavaScript or TypeScript file :: Arguments: <path>",
-            argc: 1,
-            async callback([path]) {
+            desc: "Executes a JavaScript or TypeScript file :: Arguments: <path> <...args>",
+            argc: NaN,
+            async callback([path, ...args]) {
                 path = resolve(path)
+                process.argv = process.argv.slice(0, 2).concat(args)
                 ConfigLoader.loadConfigFile(path, dirname(path), null, "normal")
             },
         }

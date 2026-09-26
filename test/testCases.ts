@@ -1391,7 +1391,8 @@ export const cases: Record<string, TestCase> = {
 
                     project.res("Example.Module.dll")
                 `,
-                "Example.Module.dll": ""
+                "Example.Module.dll": "",
+                "Example.Module.pdb": ""
             },
             "portB": {
                 git,
@@ -1414,7 +1415,10 @@ export const cases: Record<string, TestCase> = {
             await run(`git add . && git commit -m "Initial commit"`, "./portB")
             await run(`ucpem sync`, "./portB", runnerSettings())
 
-            await run(`ucpem install local`, "./project", runnerSettings())
+            const result = await run(`ucpem install local`, "./project", runnerSettings())
+            includes(result, "example/module")
+            includes(result, "Example.Module.dll")
+            includes(result, "Example.Module.pdb")
         }
     },
 }

@@ -23,7 +23,7 @@ export class LocalLinker {
             if (err.code != "ENOENT") throw err
         }
 
-        link(this.project.path, linkTarget, false, true)
+        link(this.project.path, linkTarget, { targetGlobal: true })
     }
 
     public unsyncThis() {
@@ -67,7 +67,7 @@ export class LocalLinker {
             if (err.code != "ENOENT") throw err
         }
 
-        link(linkSource, linkTarget, true, false)
+        link(linkSource, linkTarget, { sourceGlobal: true })
     }
 
     public unsyncWith(name: string) {

@@ -1,14 +1,11 @@
 import chalk from "chalk"
-import { symlinkSync } from "fs"
+import { existsSync, symlinkSync } from "fs"
 import { relative } from "path"
 import { state } from "../global"
 import { DependencyTracker } from "./DependencyTracker"
+import { GitIgnoreGenerator } from "../Install/GitIgnoreGenerator"
 
-export function link(source: string, target: string, sourceGlobal = false, targetGlobal = false) {
-    const projectRoot = DependencyTracker.getRootProject().path
-    const sourcePath = sourceGlobal ? source : "./" + relative(projectRoot, source)
-    const targetPath = targetGlobal ? target : "./" + relative(projectRoot, target)
-
+function _link(source: string, target: string, sourcePath: string, targetPath: string, gitignore: string | null) {
     const message = `[${chalk.cyanBright("LINK")}] Linking ${sourcePath} → ${targetPath}`
     if (!state.quiet) {
         if (state.compact) {
@@ -19,6 +16,9 @@ export function link(source: string, target: string, sourceGlobal = false, targe
     }
 
     LinkHistory.push({ source, target })
+    if (gitignore != null) {
+        GitIgnoreGenerator.addIgnore(gitignore, relative(gitignore, target))
+    }
 
     try {
         symlinkSync(source, target, "junction")
@@ -27,6 +27,25 @@ export function link(source: string, target: string, sourceGlobal = false, targe
             if (!state.compact && !state.quiet) console.log(`    └─ File already exists`)
         } else {
             throw err
+        }
+    }
+}
+
+export function link(source: string, target: string, { sourceGlobal = false, targetGlobal = false, gitignore = null as string | null } = {}) {
+    const projectRoot = DependencyTracker.getRootProject().path
+    const sourcePath = sourceGlobal ? source : "./" + relative(projectRoot, source)
+    const targetPath = targetGlobal ? target : "./" + relative(projectRoot, target)
+
+    _link(source, target, sourcePath, targetPath, gitignore)
+
+    // Also link .dll debugging symbols if extant
+    if (source.endsWith(".dll")) {
+        const pdbSourcePath = sourcePath.slice(0, -4) + ".pdb"
+        if (existsSync(pdbSourcePath)) {
+            const pdbTargetPath = targetPath.slice(0, -4) + ".pdb"
+            const pdbTarget = target.slice(0, -4) + ".pdb"
+            const pdbSource = source.slice(0, -4) + ".pdb"
+            _link(pdbSource, pdbTarget, pdbSourcePath, pdbTargetPath, gitignore)
         }
     }
 }

@@ -51,8 +51,7 @@ export class Resource {
             }
 
             if (linkPath != this.path) {
-                link(linkTarget, linkPath)
-                GitIgnoreGenerator.addIgnore(linkDir, relative(linkDir, linkPath))
+                link(linkTarget, linkPath, { gitignore: linkDir })
             }
         }
 
